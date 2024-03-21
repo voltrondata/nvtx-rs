@@ -1,0 +1,3 @@
+[submodule "nvtx"]
+	path = crates/nvtx-src/vendor/nvtx
+	url = https://github.com/NVIDIA/NVTX.git

@@ -1,0 +1,27 @@
+[workspace]
+members = ["crates/nvtx-sys"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Voltron Data"]
+edition = "2021"
+rust-version = "1.74"
+description = "NVIDIA NVTX bindings for Rust"
+repository = "https://github.com/voltrondata/nvtx-rs"
+readme = "README.md"
+publish = false
+license = "Proprietary"
+
+[package]
+name = "nvtx-rs"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description.workspace = true
+repository.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[dependencies]
+nvtx-sys = { path = "crates/nvtx-sys" }
