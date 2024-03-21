@@ -25,3 +25,4 @@ publish.workspace = true
 
 [dependencies]
 nvtx-sys = { path = "crates/nvtx-sys" }
+color-name = "1.1.0"
