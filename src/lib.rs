@@ -1,9 +1,26 @@
 pub mod nvtx {
 
-    use std::{collections::HashMap, ffi::CString};
+    use std::{
+        ffi::{CStr, CString},
+        sync::atomic::{AtomicU32, Ordering},
+    };
 
     pub use color_name::colors;
 
+    #[doc = "Represents a color in use for controlling appearance within nsight"]
+    #[derive(Debug)]
+    pub struct Color {
+        /// alpha channel
+        a: u8,
+        /// red channel
+        r: u8,
+        /// green channel
+        g: u8,
+        /// blue channel
+        b: u8,
+    }
+
+    #[doc = r"Represents a payload value for use within event attributes"]
     #[derive(Debug)]
     pub enum Payload {
         Float(f32),
@@ -14,55 +31,105 @@ pub mod nvtx {
         Uint64(u64),
     }
 
-    impl Payload {
-        fn to_type(self: &Payload) -> nvtx_sys::ffi::nvtxPayloadType_t {
-            use nvtx_sys::ffi;
-            match self {
-                Payload::Float(_) => ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_FLOAT,
-                Payload::Double(_) => ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_DOUBLE,
-                Payload::Int32(_) => ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT32,
-                Payload::Int64(_) => ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT64,
-                Payload::Uint32(_) => ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT32,
-                Payload::Uint64(_) => ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT64,
-            }
-        }
+    #[doc = "Handle for a registered nvtx string. See Domain::register_string"]
+    #[derive(Debug)]
+    pub struct RegisteredString {
+        handle: nvtx_sys::ffi::nvtxStringHandle_t,
+    }
 
-        fn to_value(self: &Payload) -> nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t {
-            match self {
-                Payload::Float(x) => nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { fValue: *x },
-                Payload::Double(x) => {
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { dValue: *x }
-                }
-                Payload::Int32(x) => nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { iValue: *x },
-                Payload::Int64(x) => {
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { llValue: *x }
-                }
-                Payload::Uint32(x) => {
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { uiValue: *x }
-                }
-                Payload::Uint64(x) => {
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { ullValue: *x }
-                }
-            }
-        }
+    #[doc = "Represents a category for use with event and range grouping"]
+    #[derive(Debug)]
+    pub struct Category {
+        id: u32,
+    }
 
-        fn to_pair(
-            self: &Self,
-        ) -> (
-            nvtx_sys::ffi::nvtxPayloadType_t,
-            nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t,
-        ) {
-            (self.to_type(), self.to_value())
+    #[doc = "Represents a domain for high-level grouping"]
+    #[derive(Debug)]
+    pub struct Domain {
+        handle: nvtx_sys::ffi::nvtxDomainHandle_t,
+    }
+
+    #[doc = "A convenience wrapper for various string types"]
+    pub enum Str<'a> {
+        CLikeString(CString),
+        RustString(String),
+        CLikeStr(&'a CStr),
+        RustStr(&'a str),
+    }
+
+    impl<'a> Str<'a> {
+        fn make_from(value: Str<'a>) -> CString {
+            match value {
+                Str::CLikeString(x) => x,
+                Str::RustString(x) => CString::new(x).unwrap(),
+                Str::CLikeStr(x) => CString::new(x.to_str().unwrap()).unwrap(),
+                Str::RustStr(x) => CString::new(x).unwrap(),
+            }
         }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct Color {
-        a: u8,
-        r: u8,
-        g: u8,
-        b: u8,
+    impl From<CString> for Str<'_> {
+        fn from(v: CString) -> Self {
+            Self::CLikeString(v)
+        }
     }
+
+    impl From<String> for Str<'_> {
+        fn from(v: String) -> Self {
+            Self::RustString(v)
+        }
+    }
+
+    impl<'a> From<&'a str> for Str<'a> {
+        fn from(v: &'a str) -> Self {
+            Self::RustStr(v)
+        }
+    }
+
+    impl<'a> From<&'a CStr> for Str<'a> {
+        fn from(v: &'a CStr) -> Self {
+            Self::CLikeStr(v)
+        }
+    }
+
+    #[doc = "Represents a message for use within events and ranges"]
+    #[derive(Debug)]
+    pub enum Message {
+        Ascii(CString),
+        Registered(RegisteredString),
+    }
+
+    #[doc = "Model all possible attributes that can be associated with events and ranges"]
+    #[derive(Debug)]
+    pub struct Attribute {
+        category: Option<Category>,
+        color: Option<Color>,
+        payload: Option<Payload>,
+        message: Option<Message>,
+    }
+
+    #[doc = "Builder to facilitate easier construction of Attribute"]
+    #[derive(Default, Debug)]
+    pub struct AttributeBuilder {
+        category: Option<Category>,
+        color: Option<Color>,
+        payload: Option<Payload>,
+        message: Option<Message>,
+    }
+
+    #[doc = "Id returned from certain nvtx function calls"]
+    #[derive(Debug)]
+    pub struct RangeId {
+        id: nvtx_sys::ffi::nvtxRangeId_t,
+    }
+
+    #[doc = "A RAII-like wrapper for range creation and destruction"]
+    #[derive(Debug)]
+    pub struct Range {
+        id: RangeId,
+    }
+
+    type RangeLevel = i32;
 
     impl From<[u8; 3]> for Color {
         fn from(value: [u8; 3]) -> Self {
@@ -76,180 +143,292 @@ pub mod nvtx {
     }
 
     impl Color {
+        pub fn new(a: u8, r: u8, g: u8, b: u8) -> Self {
+            Self { a, r, g, b }
+        }
+
         pub fn transparency(self: &mut Color, value: u8) {
             self.a = value
         }
+    }
 
-        fn to_type(self: &Self) -> nvtx_sys::ffi::nvtxColorType_t {
-            nvtx_sys::ffi::nvtxColorType_t_NVTX_COLOR_ARGB
-        }
-        fn to_value(self: &Self) -> u32 {
-            (self.a as u32) << 24 | (self.r as u32) << 16 | (self.g as u32) << 8 | (self.b as u32)
-        }
-        fn to_pair(self: &Self) -> (nvtx_sys::ffi::nvtxColorType_t, u32) {
-            (self.to_type(), self.to_value())
+    impl From<u64> for Payload {
+        fn from(v: u64) -> Self {
+            Self::Uint64(v)
         }
     }
 
-    #[derive(Debug)]
-    pub struct RegisteredString {
-        handle: nvtx_sys::ffi::nvtxStringHandle_t,
+    impl From<u32> for Payload {
+        fn from(v: u32) -> Self {
+            Self::Uint32(v)
+        }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct Category {
-        id: u32,
-        name: CString,
-        domain: Option<Domain>,
+    impl From<i64> for Payload {
+        fn from(v: i64) -> Self {
+            Self::Int64(v)
+        }
     }
 
-    #[derive(Default, Debug)]
-    pub struct CategoryRegistry {
-        registrations: u32,
-        domain_registrations: HashMap<nvtx_sys::ffi::nvtxDomainHandle_t, u32>,
+    impl From<i32> for Payload {
+        fn from(v: i32) -> Self {
+            Self::Int32(v)
+        }
     }
 
-    impl CategoryRegistry {
-        pub fn create(self: &mut Self, name: CString, domain: Option<Domain>) -> Category {
-            let id = match &domain {
-                Some(d) => self.domain_registrations.entry(d.handle).or_insert(0),
-                None => &mut self.registrations,
-            };
-            *id += 1;
-            let cat = Category {
-                id: *id,
-                name,
-                domain,
-            };
-            unsafe {
-                match cat.domain {
-                    Some(ref d) => {
-                        nvtx_sys::ffi::nvtxDomainNameCategoryA(d.handle, cat.id, cat.name.as_ptr())
-                    }
-                    None => nvtx_sys::ffi::nvtxNameCategoryA(cat.id, cat.name.as_ptr()),
-                }
+    impl From<f64> for Payload {
+        fn from(v: f64) -> Self {
+            Self::Double(v)
+        }
+    }
+
+    impl From<f32> for Payload {
+        fn from(v: f32) -> Self {
+            Self::Float(v)
+        }
+    }
+
+    impl Category {
+        pub fn new(name: Str<'_>, domain: Option<&Domain>) -> Category {
+            static COUNT: AtomicU32 = AtomicU32::new(0);
+            let id: u32 = 1 + COUNT.fetch_add(1, Ordering::SeqCst);
+            let cstring = Str::make_from(name);
+            match domain {
+                Some(d) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainNameCategoryA(d.handle, id, cstring.as_ptr())
+                },
+                None => unsafe { nvtx_sys::ffi::nvtxNameCategoryA(id, cstring.as_ptr()) },
             }
-            cat
+            Category { id }
         }
-    }
-
-    #[derive(Debug, Clone, Copy)]
-    pub struct Domain {
-        handle: nvtx_sys::ffi::nvtxDomainHandle_t,
     }
 
     impl Domain {
-        pub fn register_string(self: &Self, string: CString) -> RegisteredString {
+        pub fn new(name: Str<'_>) -> Self {
+            let cstring = Str::make_from(name);
+            Domain {
+                handle: unsafe { nvtx_sys::ffi::nvtxDomainCreateA(cstring.as_ptr()) },
+            }
+        }
+
+        pub fn register_string(self: &Self, string: Str<'_>) -> RegisteredString {
+            let cstring = Str::make_from(string);
             unsafe {
-                let handle = nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, string.as_ptr());
+                let handle =
+                    nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, cstring.as_ptr());
                 RegisteredString { handle }
             }
         }
 
-        pub fn mark(self: &Self, attr: EventAttribute) {
+        pub fn mark(self: &Self, attr: Attribute) {
             unsafe {
-                let attribute = attr.to_struct();
+                let attribute = attr.encode();
                 nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &attribute)
             }
         }
     }
 
-    #[derive(Default, Debug)]
-    pub struct DomainRegistry {
-        registrations: HashMap<CString, Domain>,
-    }
-
-    impl Drop for DomainRegistry {
+    impl Drop for Domain {
         fn drop(&mut self) {
-            self.registrations
-                .values()
-                .for_each(|d| unsafe { nvtx_sys::ffi::nvtxDomainDestroy(d.handle) })
+            unsafe { nvtx_sys::ffi::nvtxDomainDestroy(self.handle) }
         }
     }
 
-    impl DomainRegistry {
-        pub fn create(self: &mut Self, name: CString) -> Domain {
-            let domain = Domain {
-                handle: unsafe { nvtx_sys::ffi::nvtxDomainCreateA(name.as_ptr()) },
-            };
-            self.registrations.insert(name.clone(), domain.clone());
-            domain
+    impl From<RegisteredString> for Message {
+        fn from(v: RegisteredString) -> Self {
+            Self::Registered(v)
+        }
+    }
+
+    impl<'a> From<Str<'a>> for Message {
+        fn from(v: Str<'a>) -> Self {
+            Self::Ascii(Str::make_from(v))
+        }
+    }
+
+    impl Attribute {
+        pub fn builder() -> AttributeBuilder {
+            AttributeBuilder::new()
+        }
+    }
+
+    impl AttributeBuilder {
+        fn new() -> AttributeBuilder {
+            AttributeBuilder {
+                category: None,
+                color: None,
+                payload: None,
+                message: None,
+            }
         }
 
-        pub fn destroy(self: &mut Self, name: CString) {
-            match self.registrations.get(&name) {
-                Some(d) => unsafe { nvtx_sys::ffi::nvtxDomainDestroy(d.handle) },
-                None => (),
+        pub fn category(mut self, category: Category) -> AttributeBuilder {
+            self.category = Some(category);
+            self
+        }
+
+        pub fn color(mut self, color: Color) -> AttributeBuilder {
+            self.color = Some(color);
+            self
+        }
+
+        pub fn payload(mut self, payload: Payload) -> AttributeBuilder {
+            self.payload = Some(payload);
+            self
+        }
+
+        pub fn message(mut self, message: Message) -> AttributeBuilder {
+            self.message = Some(message);
+            self
+        }
+
+        pub fn build(self) -> Attribute {
+            Attribute {
+                category: self.category,
+                color: self.color,
+                payload: self.payload,
+                message: self.message,
             }
         }
     }
 
-    #[derive(Debug)]
-    pub enum Message {
-        Ascii(CString),
-        Registered(RegisteredString),
+    impl Range {
+        pub fn new(attr: &Attribute) -> Range {
+            let id = range_start(attr);
+            Range { id }
+        }
     }
 
-    impl Message {
-        fn to_type(self: &Self) -> nvtx_sys::ffi::nvtxMessageType_t {
+    impl Drop for Range {
+        fn drop(&mut self) {
+            range_end(&self.id)
+        }
+    }
+
+    trait TypeValueEncodable {
+        type Type;
+        type Value;
+        fn encode(&self) -> (Self::Type, Self::Value);
+        fn default_encoding() -> (Self::Type, Self::Value);
+    }
+
+    impl TypeValueEncodable for Color {
+        type Type = nvtx_sys::ffi::nvtxColorType_t;
+        type Value = u32;
+
+        fn encode(&self) -> (Self::Type, Self::Value) {
+            let as_u32 = (self.a as u32) << 24
+                | (self.r as u32) << 16
+                | (self.g as u32) << 8
+                | (self.b as u32);
+            (nvtx_sys::ffi::nvtxColorType_t_NVTX_COLOR_ARGB, as_u32)
+        }
+
+        fn default_encoding() -> (Self::Type, Self::Value) {
+            (nvtx_sys::ffi::nvtxColorType_t_NVTX_COLOR_UNKNOWN, 0)
+        }
+    }
+
+    impl TypeValueEncodable for Payload {
+        type Type = nvtx_sys::ffi::nvtxPayloadType_t;
+        type Value = nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t;
+        fn encode(&self) -> (Self::Type, Self::Value) {
             use nvtx_sys::ffi;
             match self {
-                Message::Ascii(_) => ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_ASCII,
-                Message::Registered(_) => ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_REGISTERED,
+                Payload::Float(x) => (
+                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_FLOAT,
+                    ffi::nvtxEventAttributes_v2_payload_t { fValue: *x },
+                ),
+                Payload::Double(x) => (
+                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_DOUBLE,
+                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { dValue: *x },
+                ),
+                Payload::Int32(x) => (
+                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT32,
+                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { iValue: *x },
+                ),
+                Payload::Int64(x) => (
+                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT64,
+                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { llValue: *x },
+                ),
+                Payload::Uint32(x) => (
+                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT32,
+                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { uiValue: *x },
+                ),
+                Payload::Uint64(x) => (
+                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT64,
+                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { ullValue: *x },
+                ),
             }
         }
 
-        fn to_value(self: &Self) -> nvtx_sys::ffi::nvtxMessageValue_t {
-            match self {
-                Message::Ascii(s) => nvtx_sys::ffi::nvtxMessageValue_t { ascii: s.as_ptr() },
-                Message::Registered(r) => nvtx_sys::ffi::nvtxMessageValue_t {
-                    registered: r.handle,
-                },
-            }
-        }
-
-        fn to_pair(
-            self: &Self,
-        ) -> (
-            nvtx_sys::ffi::nvtxMessageType_t,
-            nvtx_sys::ffi::nvtxMessageValue_t,
-        ) {
-            (self.to_type(), self.to_value())
-        }
-    }
-
-    pub struct EventAttribute {
-        category: Option<Category>,
-        color: Option<Color>,
-        payload: Option<Payload>,
-        message: Option<Message>,
-    }
-
-    impl EventAttribute {
-        pub fn builder() -> EventAttributeBuilder {
-            EventAttributeBuilder::new()
-        }
-
-        fn to_struct(self) -> nvtx_sys::ffi::nvtxEventAttributes_t {
-            let (color_type, color_value) = self
-                .color
-                .map(|c| c.to_pair())
-                .unwrap_or((nvtx_sys::ffi::nvtxColorType_t_NVTX_COLOR_UNKNOWN, 0));
-            let (payload_type, payload_value) = self.payload.map(|c| c.to_pair()).unwrap_or((
+        fn default_encoding() -> (Self::Type, Self::Value) {
+            (
                 nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_UNKNOWN,
                 nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { ullValue: 0 },
-            ));
-            let (msg_type, msg_value) = self.message.map(|c| c.to_pair()).unwrap_or((
+            )
+        }
+    }
+
+    impl TypeValueEncodable for Message {
+        type Type = nvtx_sys::ffi::nvtxMessageType_t;
+        type Value = nvtx_sys::ffi::nvtxMessageValue_t;
+
+        fn encode(&self) -> (Self::Type, Self::Value) {
+            use nvtx_sys::ffi;
+            match self {
+                Message::Ascii(s) => (
+                    ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_ASCII,
+                    nvtx_sys::ffi::nvtxMessageValue_t { ascii: s.as_ptr() },
+                ),
+                Message::Registered(r) => (
+                    ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_REGISTERED,
+                    nvtx_sys::ffi::nvtxMessageValue_t {
+                        registered: r.handle,
+                    },
+                ),
+            }
+        }
+
+        fn default_encoding() -> (Self::Type, Self::Value) {
+            (
                 nvtx_sys::ffi::nvtxMessageType_t_NVTX_MESSAGE_UNKNOWN,
                 nvtx_sys::ffi::nvtxMessageValue_t {
                     ascii: std::ptr::null(),
                 },
-            ));
+            )
+        }
+    }
 
-            nvtx_sys::ffi::nvtxEventAttributes_t {
+    trait ValueEncodable {
+        type Value;
+        fn encode(&self) -> Self::Value;
+    }
+
+    impl ValueEncodable for Attribute {
+        type Value = nvtx_sys::ffi::nvtxEventAttributes_t;
+
+        fn encode(&self) -> Self::Value {
+            let (color_type, color_value) = self
+                .color
+                .as_ref()
+                .map(|c| c.encode())
+                .unwrap_or(Color::default_encoding());
+            let (payload_type, payload_value) = self
+                .payload
+                .as_ref()
+                .map(|c| c.encode())
+                .unwrap_or(Payload::default_encoding());
+            let (msg_type, msg_value) = self
+                .message
+                .as_ref()
+                .map(|c| c.encode())
+                .unwrap_or(Message::default_encoding());
+            let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
+            Self::Value {
                 version: nvtx_sys::ffi::NVTX_VERSION as u16,
                 size: 48,
-                category: self.category.map(|c| c.id).unwrap_or(0),
+                category: cat,
                 colorType: color_type as i32,
                 color: color_value,
                 payloadType: payload_type as i32,
@@ -261,60 +440,40 @@ pub mod nvtx {
         }
     }
 
-    #[derive(Default, Debug)]
-    pub struct EventAttributeBuilder {
-        category: Option<Category>,
-        color: Option<Color>,
-        payload: Option<Payload>,
-        message: Option<Message>,
-    }
-
-    impl EventAttributeBuilder {
-        fn new() -> EventAttributeBuilder {
-            EventAttributeBuilder {
-                category: None,
-                color: None,
-                payload: None,
-                message: None,
-            }
-        }
-
-        pub fn category(mut self, category: Category) -> EventAttributeBuilder {
-            self.category = Some(category);
-            self
-        }
-
-        pub fn color(mut self, color: Color) -> EventAttributeBuilder {
-            self.color = Some(color);
-            self
-        }
-
-        pub fn payload(mut self, payload: Payload) -> EventAttributeBuilder {
-            self.payload = Some(payload);
-            self
-        }
-
-        pub fn message(mut self, message: Message) -> EventAttributeBuilder {
-            self.message = Some(message);
-            self
-        }
-
-        pub fn build(self) -> EventAttribute {
-            EventAttribute {
-                category: self.category,
-                color: self.color,
-                payload: self.payload,
-                message: self.message,
-            }
+    pub fn mark(attr: &Attribute) {
+        unsafe {
+            let attribute = attr.encode();
+            nvtx_sys::ffi::nvtxMarkEx(&attribute)
         }
     }
 
-    pub fn str(s: &str) -> CString {
-        string(s.to_string())
+    pub fn range_start(attr: &Attribute) -> RangeId {
+        let attribute = attr.encode();
+        let id = unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&attribute) };
+        RangeId { id }
     }
 
-    pub fn string(string: String) -> CString {
-        CString::new(string).unwrap()
+    pub fn range_end(range: &RangeId) {
+        unsafe { nvtx_sys::ffi::nvtxRangeEnd(range.id) }
+    }
+
+    pub fn range_push(attr: &Attribute) -> Option<RangeLevel> {
+        let attribute = attr.encode();
+        let res = unsafe { nvtx_sys::ffi::nvtxRangePushEx(&attribute) };
+        if res < 0 {
+            None
+        } else {
+            Some(res)
+        }
+    }
+
+    pub fn range_pop() -> Option<RangeLevel> {
+        let res = unsafe { nvtx_sys::ffi::nvtxRangePop() };
+        if res < 0 {
+            None
+        } else {
+            Some(res)
+        }
     }
 }
 
@@ -322,23 +481,19 @@ pub mod nvtx {
 mod tests {
     use crate::nvtx;
 
-
     #[test]
     fn it_works() {
-        let mut cr = nvtx::CategoryRegistry::default();
-        let mut dr = nvtx::DomainRegistry::default();
-
-        let theseus = dr.create(nvtx::str("theseus"));
-        let kernel = cr.create(nvtx::str("Kernel"), Some(theseus));
-        let registered_string = theseus.register_string(nvtx::str("A registered string"));
+        let theseus = nvtx::Domain::new(nvtx::Str::from("theseus"));
+        let kernel = nvtx::Category::new(nvtx::Str::from("Kernel"), Some(&theseus));
+        let registered_string = theseus.register_string(nvtx::Str::from("A registered string"));
 
         theseus.mark(
-            nvtx::EventAttribute::builder()
+            nvtx::Attribute::builder()
                 .color(nvtx::Color::from(nvtx::colors::aliceblue))
                 .category(kernel)
-                .payload(nvtx::Payload::Double(3.14))
-                .message(nvtx::Message::Registered(registered_string))
-                .build()
+                .payload(nvtx::Payload::from(3.14))
+                .message(nvtx::Message::from(registered_string))
+                .build(),
         )
     }
 }
