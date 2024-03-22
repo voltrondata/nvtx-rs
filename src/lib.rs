@@ -4,7 +4,7 @@ pub mod nvtx {
         ffi::{CStr, CString},
         sync::atomic::{AtomicU32, Ordering},
     };
-
+    use widestring::{WideCStr, WideCString};
     pub use color_name::colors;
 
     /// Represents a color in use for controlling appearance within nsight
@@ -51,25 +51,16 @@ pub mod nvtx {
 
     /// A convenience wrapper for various string types
     #[derive(Debug, Clone)]
-    pub enum StrType {
+    pub enum Str {
         Ascii(CString),
-        Unicode(CString),
-    }
-
-    /// A convenience wrapper for various string types
-    #[derive(Debug, Clone)]
-    pub enum Str<'a> {
-        CLikeString(CString),
-        RustString(String),
-        CLikeStr(&'a CStr),
-        RustStr(&'a str),
+        Unicode(WideCString),
     }
 
     /// Represents a message for use within events and ranges
     #[derive(Debug, Clone)]
     pub enum Message {
         Ascii(CString),
-        Unicode(CString),
+        Unicode(WideCString),
         Registered(RegisteredString),
     }
 
@@ -103,7 +94,11 @@ pub mod nvtx {
         id: RangeId,
     }
 
-    type RangeLevel = i32;
+    /// Opaque type for inspecting returned levels from Push/Pop
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct RangeLevel {
+        value: i32,
+    }
 
     impl From<[u8; 3]> for Color {
         fn from(value: [u8; 3]) -> Self {
@@ -163,23 +158,21 @@ pub mod nvtx {
     }
 
     impl Category {
-        pub fn new(name: Str<'_>, domain: Option<&Domain>) -> Category {
+        pub fn new(name: Str, domain: Option<&Domain>) -> Category {
             static COUNT: AtomicU32 = AtomicU32::new(0);
             let id: u32 = 1 + COUNT.fetch_add(1, Ordering::SeqCst);
             match domain {
-                Some(d) => match Str::make_from(name) {
-                    StrType::Ascii(s) => unsafe {
+                Some(d) => match name {
+                    Str::Ascii(s) => unsafe {
                         nvtx_sys::ffi::nvtxDomainNameCategoryA(d.handle, id, s.as_ptr())
                     },
-                    StrType::Unicode(s) => unsafe {
+                    Str::Unicode(s) => unsafe {
                         nvtx_sys::ffi::nvtxDomainNameCategoryW(d.handle, id, s.as_ptr().cast())
                     },
                 },
-                None => match Str::make_from(name) {
-                    StrType::Ascii(s) => unsafe {
-                        nvtx_sys::ffi::nvtxNameCategoryA(id, s.as_ptr())
-                    },
-                    StrType::Unicode(s) => unsafe {
+                None => match name {
+                    Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameCategoryA(id, s.as_ptr()) },
+                    Str::Unicode(s) => unsafe {
                         nvtx_sys::ffi::nvtxNameCategoryW(id, s.as_ptr().cast())
                     },
                 },
@@ -189,24 +182,24 @@ pub mod nvtx {
     }
 
     impl Domain {
-        pub fn new(name: Str<'_>) -> Self {
+        pub fn new(name: Str) -> Self {
             Domain {
-                handle: match Str::make_from(name) {
-                    StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
-                    StrType::Unicode(s) => unsafe {
+                handle: match name {
+                    Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
+                    Str::Unicode(s) => unsafe {
                         nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
                     },
                 },
             }
         }
 
-        pub fn register_string(self: &Self, string: Str<'_>) -> RegisteredString {
-            let handle = match Str::make_from(string) {
-                StrType::Ascii(s) => unsafe {
+        pub fn register_string(self: &Self, string: Str) -> RegisteredString {
+            let handle = match string {
+                Str::Ascii(s) => unsafe {
                     nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
                 },
-                StrType::Unicode(s) => unsafe {
-                    nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
+                Str::Unicode(s) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainRegisterStringW(self.handle, s.as_ptr().cast())
                 },
             };
             RegisteredString { handle }
@@ -224,38 +217,49 @@ pub mod nvtx {
         }
     }
 
-    impl<'a> Str<'a> {
-        fn make_from(value: Str<'a>) -> StrType {
-            match value {
-                Str::CLikeString(x) => StrType::Ascii(x),
-                Str::RustString(x) => StrType::Unicode(CString::new(x).unwrap()),
-                Str::CLikeStr(x) => StrType::Ascii(CString::new(x.to_str().unwrap()).unwrap()),
-                Str::RustStr(x) => StrType::Unicode(CString::new(x).unwrap()),
+    impl From<String> for Str {
+        fn from(v: String) -> Self {
+            if v.is_ascii() {
+                Self::Ascii(CString::new(v).unwrap())
+            } else {
+                Self::Unicode(
+                    WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
+                )
             }
         }
     }
 
-    impl From<CString> for Str<'_> {
-        fn from(v: CString) -> Self {
-            Self::CLikeString(v)
-        }
-    }
-
-    impl From<String> for Str<'_> {
-        fn from(v: String) -> Self {
-            Self::RustString(v)
-        }
-    }
-
-    impl<'a> From<&'a str> for Str<'a> {
+    impl<'a> From<&'a str> for Str {
         fn from(v: &'a str) -> Self {
-            Self::RustStr(v)
+            if v.is_ascii() {
+                Self::Ascii(CString::new(v).unwrap())
+            } else {
+                Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
+            }
         }
     }
 
-    impl<'a> From<&'a CStr> for Str<'a> {
+    impl From<CString> for Str {
+        fn from(v: CString) -> Self {
+            Self::Ascii(v)
+        }
+    }
+
+    impl<'a> From<&'a CStr> for Str {
         fn from(v: &'a CStr) -> Self {
-            Self::CLikeStr(v)
+            Self::Ascii(CString::from(v))
+        }
+    }
+
+    impl<'a> From<&'a WideCStr> for Str {
+        fn from(v: &'a WideCStr) -> Self {
+            Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
+        }
+    }
+
+    impl From<WideCString> for Str {
+        fn from(v: WideCString) -> Self {
+            Self::Unicode(v)
         }
     }
 
@@ -265,11 +269,11 @@ pub mod nvtx {
         }
     }
 
-    impl<'a> From<Str<'a>> for Message {
-        fn from(v: Str<'a>) -> Self {
-            match Str::make_from(v) {
-                StrType::Ascii(s) => Message::Ascii(s),
-                StrType::Unicode(s) => Message::Unicode(s),
+    impl From<Str> for Message {
+        fn from(v: Str) -> Self {
+            match v {
+                Str::Ascii(s) => Message::Ascii(s),
+                Str::Unicode(s) => Message::Unicode(s),
             }
         }
     }
@@ -361,31 +365,30 @@ pub mod nvtx {
         type Type = nvtx_sys::ffi::nvtxPayloadType_t;
         type Value = nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t;
         fn encode(&self) -> (Self::Type, Self::Value) {
-            use nvtx_sys::ffi;
             match self {
                 Payload::Float(x) => (
-                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_FLOAT,
-                    ffi::nvtxEventAttributes_v2_payload_t { fValue: *x },
+                    nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_FLOAT,
+                    Self::Value { fValue: *x },
                 ),
                 Payload::Double(x) => (
-                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_DOUBLE,
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { dValue: *x },
+                    nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_DOUBLE,
+                    Self::Value { dValue: *x },
                 ),
                 Payload::Int32(x) => (
-                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT32,
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { iValue: *x },
+                    nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT32,
+                    Self::Value { iValue: *x },
                 ),
                 Payload::Int64(x) => (
-                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT64,
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { llValue: *x },
+                    nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_INT64,
+                    Self::Value { llValue: *x },
                 ),
                 Payload::Uint32(x) => (
-                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT32,
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { uiValue: *x },
+                    nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT32,
+                    Self::Value { uiValue: *x },
                 ),
                 Payload::Uint64(x) => (
-                    ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT64,
-                    nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { ullValue: *x },
+                    nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_TYPE_UNSIGNED_INT64,
+                    Self::Value { ullValue: *x },
                 ),
             }
         }
@@ -393,7 +396,7 @@ pub mod nvtx {
         fn default_encoding() -> (Self::Type, Self::Value) {
             (
                 nvtx_sys::ffi::nvtxPayloadType_t_NVTX_PAYLOAD_UNKNOWN,
-                nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t { ullValue: 0 },
+                Self::Value { ullValue: 0 },
             )
         }
     }
@@ -407,17 +410,15 @@ pub mod nvtx {
             match self {
                 Message::Ascii(s) => (
                     ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_ASCII,
-                    nvtx_sys::ffi::nvtxMessageValue_t { ascii: s.as_ptr() },
+                    Self::Value { ascii: s.as_ptr() },
                 ),
                 Message::Unicode(s) => (
                     ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_UNICODE,
-                    nvtx_sys::ffi::nvtxMessageValue_t { ascii: s.as_ptr() },
+                    Self::Value { unicode: s.as_ptr().cast() },
                 ),
                 Message::Registered(r) => (
                     ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_REGISTERED,
-                    nvtx_sys::ffi::nvtxMessageValue_t {
-                        registered: r.handle,
-                    },
+                    Self::Value {registered: r.handle },
                 ),
             }
         }
@@ -425,9 +426,7 @@ pub mod nvtx {
         fn default_encoding() -> (Self::Type, Self::Value) {
             (
                 nvtx_sys::ffi::nvtxMessageType_t_NVTX_MESSAGE_UNKNOWN,
-                nvtx_sys::ffi::nvtxMessageValue_t {
-                    ascii: std::ptr::null(),
-                },
+                Self::Value { ascii: std::ptr::null() },
             )
         }
     }
@@ -478,9 +477,9 @@ pub mod nvtx {
     }
 
     pub fn mark_simple(s: Str) {
-        match Str::make_from(s) {
-            StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
-            StrType::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
+        match s {
+            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
+            Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
         }
     }
 
@@ -491,9 +490,9 @@ pub mod nvtx {
     }
 
     pub fn range_start_simple(s: Str) -> RangeId {
-        let id = match Str::make_from(s) {
-            StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
-            StrType::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
+        let id = match s {
+            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
+            Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
         };
         RangeId { id }
     }
@@ -504,32 +503,32 @@ pub mod nvtx {
 
     pub fn range_push(attr: Attribute) -> Option<RangeLevel> {
         let attribute = attr.encode();
-        let res = unsafe { nvtx_sys::ffi::nvtxRangePushEx(&attribute) };
-        if res < 0 {
+        let value = unsafe { nvtx_sys::ffi::nvtxRangePushEx(&attribute) };
+        if value < 0 {
             None
         } else {
-            Some(res)
+            Some(RangeLevel { value })
         }
     }
 
     pub fn range_push_simple(s: Str) -> Option<RangeLevel> {
-        let res = match Str::make_from(s) {
-            StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
-            StrType::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
+        let value = match s {
+            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
+            Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
         };
-        if res < 0 {
+        if value < 0 {
             None
         } else {
-            Some(res)
+            Some(RangeLevel { value })
         }
     }
 
     pub fn range_pop() -> Option<RangeLevel> {
-        let res = unsafe { nvtx_sys::ffi::nvtxRangePop() };
-        if res < 0 {
+        let value = unsafe { nvtx_sys::ffi::nvtxRangePop() };
+        if value < 0 {
             None
         } else {
-            Some(res)
+            Some(RangeLevel { value })
         }
     }
 }
