@@ -7,8 +7,8 @@ pub mod nvtx {
 
     pub use color_name::colors;
 
-    #[doc = "Represents a color in use for controlling appearance within nsight"]
-    #[derive(Debug, Clone)]
+    /// Represents a color in use for controlling appearance within nsight
+    #[derive(Debug, Clone, Copy)]
     pub struct Color {
         /// alpha channel
         a: u8,
@@ -20,8 +20,8 @@ pub mod nvtx {
         b: u8,
     }
 
-    #[doc = r"Represents a payload value for use within event attributes"]
-    #[derive(Debug, Clone)]
+    /// Represents a payload value for use within event attributes
+    #[derive(Debug, Clone, Copy)]
     pub enum Payload {
         Float(f32),
         Double(f64),
@@ -31,32 +31,32 @@ pub mod nvtx {
         Uint64(u64),
     }
 
-    #[doc = "Handle for a registered nvtx string. See Domain::register_string"]
+    /// Handle for a registered nvtx string. See [`Domain::register_string`]
     #[derive(Debug, Clone)]
     pub struct RegisteredString {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
     }
 
-    #[doc = "Represents a category for use with event and range grouping"]
-    #[derive(Debug, Clone)]
+    /// Represents a category for use with event and range grouping
+    #[derive(Debug, Clone, Copy)]
     pub struct Category {
         id: u32,
     }
 
-    #[doc = "Represents a domain for high-level grouping"]
+    /// Represents a domain for high-level grouping
     #[derive(Debug)]
     pub struct Domain {
         handle: nvtx_sys::ffi::nvtxDomainHandle_t,
     }
 
-    #[doc = "A convenience wrapper for various string types"]
+    /// A convenience wrapper for various string types
     #[derive(Debug, Clone)]
     pub enum StrType {
         Ascii(CString),
         Unicode(CString),
     }
 
-    #[doc = "A convenience wrapper for various string types"]
+    /// A convenience wrapper for various string types
     #[derive(Debug, Clone)]
     pub enum Str<'a> {
         CLikeString(CString),
@@ -65,7 +65,7 @@ pub mod nvtx {
         RustStr(&'a str),
     }
 
-    #[doc = "Represents a message for use within events and ranges"]
+    /// Represents a message for use within events and ranges
     #[derive(Debug, Clone)]
     pub enum Message {
         Ascii(CString),
@@ -73,7 +73,7 @@ pub mod nvtx {
         Registered(RegisteredString),
     }
 
-    #[doc = "Model all possible attributes that can be associated with events and ranges"]
+    /// Model all possible attributes that can be associated with events and ranges
     #[derive(Debug, Clone)]
     pub struct Attribute {
         category: Option<Category>,
@@ -82,7 +82,7 @@ pub mod nvtx {
         message: Option<Message>,
     }
 
-    #[doc = "Builder to facilitate easier construction of Attribute"]
+    /// Builder to facilitate easier construction of [Attribute]
     #[derive(Default, Debug)]
     pub struct AttributeBuilder {
         category: Option<Category>,
@@ -91,13 +91,13 @@ pub mod nvtx {
         message: Option<Message>,
     }
 
-    #[doc = "Id returned from certain nvtx function calls"]
+    /// Id returned from certain nvtx function calls
     #[derive(Debug, Copy, Clone)]
     pub struct RangeId {
         id: nvtx_sys::ffi::nvtxRangeId_t,
     }
 
-    #[doc = "A RAII-like wrapper for range creation and destruction"]
+    /// A RAII-like wrapper for range creation and destruction
     #[derive(Debug)]
     pub struct Range {
         id: RangeId,
@@ -121,7 +121,7 @@ pub mod nvtx {
             Self { a, r, g, b }
         }
 
-        pub fn transparency(self: &mut Color, value: u8) {
+        pub fn transparency(&mut self, value: u8) {
             self.a = value
         }
     }
@@ -282,12 +282,7 @@ pub mod nvtx {
 
     impl AttributeBuilder {
         fn new() -> AttributeBuilder {
-            AttributeBuilder {
-                category: None,
-                color: None,
-                payload: None,
-                message: None,
-            }
+            AttributeBuilder::default()
         }
 
         pub fn category(mut self, category: Category) -> AttributeBuilder {
@@ -450,17 +445,17 @@ pub mod nvtx {
                 .color
                 .as_ref()
                 .map(|c| c.encode())
-                .unwrap_or(Color::default_encoding());
+                .unwrap_or_else(Color::default_encoding);
             let (payload_type, payload_value) = self
                 .payload
                 .as_ref()
                 .map(|c| c.encode())
-                .unwrap_or(Payload::default_encoding());
+                .unwrap_or_else(Payload::default_encoding);
             let (msg_type, msg_value) = self
                 .message
                 .as_ref()
                 .map(|c| c.encode())
-                .unwrap_or(Message::default_encoding());
+                .unwrap_or_else(Message::default_encoding);
             let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
             Self::Value {
                 version: nvtx_sys::ffi::NVTX_VERSION as u16,
