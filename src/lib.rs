@@ -32,24 +32,26 @@ pub mod nvtx {
         Uint64(u64),
     }
 
-    /// Handle for a registered nvtx string. See [`Domain::register_string`]
+    /// Type for a registered nvtx string. See [`Domain::register_string`] and [`Domain::get_registered_string`]
     #[derive(Debug, Clone)]
     pub struct RegisteredString {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
     }
 
+    /// Handle for retrieving a registered string. See [`Domain::register_string`] and [`Domain::get_registered_string`]
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
     pub struct RegisteredStringHandle {
         id: usize,
     }
 
-    /// Represents a category for use with event and range grouping
+    /// Represents a category for use with event and range grouping.
     #[derive(Debug, Clone, Copy)]
     pub struct Category<'a> {
         id: u32,
         _lifetime: PhantomData<&'a ()>,
     }
 
+    /// Handle for retrieving a maintained category
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
     pub struct CategoryHandle {
         id: u32,
@@ -87,8 +89,16 @@ pub mod nvtx {
         message: Option<Message<'a>>,
     }
 
-    /// Builder to facilitate easier construction of [Attribute]
-    #[derive(Default, Debug)]
+    /// Convenience wrapper for all valid argument types
+    #[derive(Clone)]
+    pub enum Argument {
+        Ascii(CString),
+        Unicode(WideCString),
+        EventAttribute(nvtx_sys::ffi::nvtxEventAttributes_t),
+    }
+
+    /// Builder to facilitate easier construction of [`Attribute`]
+    #[derive(Default)]
     pub struct AttributeBuilder<'a> {
         category: Option<Category<'a>>,
         color: Option<Color>,
@@ -130,8 +140,24 @@ pub mod nvtx {
             Self { a, r, g, b }
         }
 
-        pub fn transparency(&mut self, value: u8) {
-            self.a = value
+        pub fn transparency(mut self, value: u8) -> Self {
+            self.a = value;
+            self
+        }
+
+        pub fn red(mut self, value: u8) -> Self {
+            self.r = value;
+            self
+        }
+
+        pub fn green(mut self, value: u8) -> Self {
+            self.g = value;
+            self
+        }
+
+        pub fn blue(mut self, value: u8) -> Self {
+            self.b = value;
+            self
         }
     }
 
@@ -245,8 +271,12 @@ pub mod nvtx {
             })
         }
 
-        pub fn mark(self: &Self, attr: Attribute) {
-            let attribute = attr.encode();
+        pub fn mark(self: &Self, arg: impl Into<Argument>) {
+            let attribute = match arg.into() {
+                Argument::EventAttribute(attr) => attr,
+                Argument::Ascii(s) => Attribute::from(s).into(),
+                Argument::Unicode(s) => Attribute::from(s).into(),
+            };
             unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &attribute) }
         }
     }
@@ -303,32 +333,111 @@ pub mod nvtx {
         }
     }
 
+    impl<'a> From<&'a str> for Argument {
+        fn from(v: &'a str) -> Self {
+            if v.is_ascii() {
+                Self::Ascii(CString::new(v).unwrap())
+            } else {
+                Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
+            }
+        }
+    }
+
+    impl From<CString> for Argument {
+        fn from(v: CString) -> Self {
+            Self::Ascii(v)
+        }
+    }
+
+    impl From<&CStr> for Argument {
+        fn from(v: &CStr) -> Self {
+            Self::Ascii(CString::from(v))
+        }
+    }
+
+    impl From<&WideCStr> for Argument {
+        fn from(v: &WideCStr) -> Self {
+            Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
+        }
+    }
+
+    impl From<WideCString> for Argument {
+        fn from(v: WideCString) -> Self {
+            Self::Unicode(v)
+        }
+    }
+
     impl<'a> From<&'a RegisteredString> for Message<'a> {
         fn from(v: &'a RegisteredString) -> Self {
             Self::Registered(v)
         }
     }
 
-    impl From<Str> for Message<'_> {
-        fn from(v: Str) -> Self {
-            match v {
-                Str::Ascii(s) => Message::Ascii(s),
-                Str::Unicode(s) => Message::Unicode(s),
+    impl From<String> for Message<'_> {
+        fn from(v: String) -> Self {
+            if v.is_ascii() {
+                Self::Ascii(CString::new(v).unwrap())
+            } else {
+                Self::Unicode(
+                    WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
+                )
             }
         }
     }
 
-    impl<'a> Attribute<'a> {
-        pub fn builder() -> AttributeBuilder<'a> {
-            AttributeBuilder::new()
+    impl<'a> From<&'a str> for Message<'_> {
+        fn from(v: &'a str) -> Self {
+            if v.is_ascii() {
+                Self::Ascii(CString::new(v).unwrap())
+            } else {
+                Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
+            }
+        }
+    }
+
+    impl From<CString> for Message<'_> {
+        fn from(v: CString) -> Self {
+            Self::Ascii(v)
+        }
+    }
+
+    impl From<&CStr> for Message<'_> {
+        fn from(v: &CStr) -> Self {
+            Self::Ascii(CString::from(v))
+        }
+    }
+
+    impl From<&WideCStr> for Message<'_> {
+        fn from(v: &WideCStr) -> Self {
+            Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
+        }
+    }
+
+    impl From<WideCString> for Message<'_> {
+        fn from(v: WideCString) -> Self {
+            Self::Unicode(v)
+        }
+    }
+
+    impl<'a> From<CString> for Attribute<'a> {
+        fn from(s: CString) -> Self {
+            AttributeBuilder::default().message(s).build()
+        }
+    }
+
+    impl<'a> From<WideCString> for Attribute<'a> {
+        fn from(s: WideCString) -> Self {
+            AttributeBuilder::default().message(s).build()
+        }
+    }
+
+    impl<'a> From<Message<'a>> for Attribute<'a> {
+        fn from(m: Message<'a>) -> Self {
+            AttributeBuilder::default().message(m).build()
         }
     }
 
     impl<'a> AttributeBuilder<'a> {
-        fn new() -> AttributeBuilder<'a> {
-            AttributeBuilder::default()
-        }
-
         pub fn category(mut self, category: impl Into<Category<'a>>) -> AttributeBuilder<'a> {
             self.category = Some(category.into());
             self
@@ -360,13 +469,8 @@ pub mod nvtx {
     }
 
     impl Range {
-        pub fn new(attr: Attribute) -> Range {
-            let id = range_start(attr);
-            Range { id }
-        }
-
-        pub fn new_simple(s: impl Into<Str>) -> Range {
-            let id = range_start_simple(s.into());
+        pub fn new(arg: impl Into<Argument>) -> Range {
+            let id = range_start(arg);
             Range { id }
         }
     }
@@ -479,30 +583,28 @@ pub mod nvtx {
 
     trait ValueEncodable {
         type Value;
-        fn encode(&self) -> Self::Value;
+        fn encode(self) -> Self::Value;
     }
 
-    impl<'a> ValueEncodable for Attribute<'a> {
-        type Value = nvtx_sys::ffi::nvtxEventAttributes_t;
-
-        fn encode(&self) -> Self::Value {
-            let (color_type, color_value) = self
+    impl<'a> From<Attribute<'a>> for nvtx_sys::ffi::nvtxEventAttributes_t {
+        fn from(attr: Attribute<'a>) -> Self {
+            let (color_type, color_value) = attr
                 .color
                 .as_ref()
                 .map(|c| c.encode())
                 .unwrap_or_else(Color::default_encoding);
-            let (payload_type, payload_value) = self
+            let (payload_type, payload_value) = attr
                 .payload
                 .as_ref()
                 .map(|c| c.encode())
                 .unwrap_or_else(Payload::default_encoding);
-            let (msg_type, msg_value) = self
+            let (msg_type, msg_value) = attr
                 .message
                 .as_ref()
                 .map(|c| c.encode())
                 .unwrap_or_else(Message::default_encoding);
-            let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
-            Self::Value {
+            let cat = attr.category.as_ref().map(|c| c.id).unwrap_or(0);
+            nvtx_sys::ffi::nvtxEventAttributes_t {
                 version: nvtx_sys::ffi::NVTX_VERSION as u16,
                 size: 48,
                 category: cat,
@@ -517,28 +619,39 @@ pub mod nvtx {
         }
     }
 
-    pub fn mark(attr: Attribute) {
-        let attribute = attr.encode();
-        unsafe { nvtx_sys::ffi::nvtxMarkEx(&attribute) }
-    }
-
-    pub fn mark_simple(s: impl Into<Str>) {
-        match s.into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
-            Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
+    impl<'a> From<Attribute<'a>> for Argument {
+        fn from(value: Attribute<'a>) -> Self {
+            match value {
+                Attribute {
+                    category: None,
+                    color: None,
+                    payload: None,
+                    message: Some(Message::Ascii(s)),
+                } => Argument::Ascii(s),
+                Attribute {
+                    category: None,
+                    color: None,
+                    payload: None,
+                    message: Some(Message::Unicode(s)),
+                } => Argument::Unicode(s),
+                attr => Argument::EventAttribute(attr.into()),
+            }
         }
     }
 
-    pub fn range_start(attr: Attribute) -> RangeId {
-        let attribute = attr.encode();
-        let id = unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&attribute) };
-        RangeId { id }
+    pub fn mark(arg: Argument) {
+        match arg {
+            Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
+            Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
+            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a) },
+        }
     }
 
-    pub fn range_start_simple(s: impl Into<Str>) -> RangeId {
-        let id = match s .into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
-            Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
+    pub fn range_start(arg: impl Into<Argument>) -> RangeId {
+        let id = match arg.into() {
+            Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
+            Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
+            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&a) },
         };
         RangeId { id }
     }
@@ -547,20 +660,11 @@ pub mod nvtx {
         unsafe { nvtx_sys::ffi::nvtxRangeEnd(range.id) }
     }
 
-    pub fn range_push(attr: Attribute) -> Option<RangeLevel> {
-        let attribute = attr.encode();
-        let value = unsafe { nvtx_sys::ffi::nvtxRangePushEx(&attribute) };
-        if value < 0 {
-            None
-        } else {
-            Some(RangeLevel { value })
-        }
-    }
-
-    pub fn range_push_simple(s: impl Into<Str>) -> Option<RangeLevel> {
-        let value = match s.into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
-            Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
+    pub fn range_push(arg: impl Into<Argument>) -> Option<RangeLevel> {
+        let value = match arg.into() {
+            Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
+            Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
+            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxRangePushEx(&a) },
         };
         if value < 0 {
             None
@@ -581,7 +685,7 @@ pub mod nvtx {
 
 #[cfg(test)]
 mod tests {
-    use crate::nvtx::{self, colors, Attribute, Domain, Range};
+    use crate::nvtx::{self, colors, AttributeBuilder, Category, Domain, Range};
 
     #[test]
     fn it_works() {
@@ -590,25 +694,37 @@ mod tests {
         let registered_string_handle = theseus.register_string("A registered string");
         let kernel = theseus.get_registered_category(category_handle).unwrap();
 
-        let msg = 
-            theseus
-                .get_registered_string(registered_string_handle)
-                .unwrap();
-        
         theseus.mark(
-            Attribute::builder()
+            AttributeBuilder::default()
                 .color(colors::blanchedalmond)
                 .payload(3.14)
-                .message(msg)
+                .message(
+                    theseus
+                        .get_registered_string(registered_string_handle)
+                        .unwrap(),
+                )
                 .build(),
         );
 
-        let _ = Range::new(Attribute::builder().category(kernel).message(msg).build());
-        let _ = Range::new_simple("hello");
+        let _ = Range::new(
+            AttributeBuilder::default()
+                .category(kernel)
+                .message("test")
+                .build(),
+        );
+        let _ = Range::new("hello");
 
-        let r = nvtx::range_push_simple("Test");
-        let s = nvtx::range_start_simple("Test 2");
+        let c = Category::new("cool");
+
+        let r = nvtx::range_push("Test");
+        let s = nvtx::range_start(
+            AttributeBuilder::default()
+                .category(c)
+                .message("Cool")
+                .build(),
+        );
         let rr = nvtx::range_pop();
+
         assert!(r == rr);
         nvtx::range_end(s);
     }
