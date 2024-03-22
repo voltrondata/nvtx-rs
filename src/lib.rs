@@ -1,11 +1,12 @@
 pub mod nvtx {
 
+    pub use color_name::colors;
     use std::{
         ffi::{CStr, CString},
+        marker::PhantomData,
         sync::atomic::{AtomicU32, Ordering},
     };
     use widestring::{WideCStr, WideCString};
-    pub use color_name::colors;
 
     /// Represents a color in use for controlling appearance within nsight
     #[derive(Debug, Clone, Copy)]
@@ -37,9 +38,20 @@ pub mod nvtx {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
     }
 
+    #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
+    pub struct RegisteredStringHandle {
+        id: usize,
+    }
+
     /// Represents a category for use with event and range grouping
     #[derive(Debug, Clone, Copy)]
-    pub struct Category {
+    pub struct Category<'a> {
+        id: u32,
+        _lifetime: PhantomData<&'a ()>,
+    }
+
+    #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
+    pub struct CategoryHandle {
         id: u32,
     }
 
@@ -47,6 +59,8 @@ pub mod nvtx {
     #[derive(Debug)]
     pub struct Domain {
         handle: nvtx_sys::ffi::nvtxDomainHandle_t,
+        registered_strings: Vec<RegisteredString>,
+        registered_categories: u32,
     }
 
     /// A convenience wrapper for various string types
@@ -58,28 +72,28 @@ pub mod nvtx {
 
     /// Represents a message for use within events and ranges
     #[derive(Debug, Clone)]
-    pub enum Message {
+    pub enum Message<'a> {
         Ascii(CString),
         Unicode(WideCString),
-        Registered(RegisteredString),
+        Registered(&'a RegisteredString),
     }
 
     /// Model all possible attributes that can be associated with events and ranges
     #[derive(Debug, Clone)]
-    pub struct Attribute {
-        category: Option<Category>,
+    pub struct Attribute<'a> {
+        category: Option<Category<'a>>,
         color: Option<Color>,
         payload: Option<Payload>,
-        message: Option<Message>,
+        message: Option<Message<'a>>,
     }
 
     /// Builder to facilitate easier construction of [Attribute]
     #[derive(Default, Debug)]
-    pub struct AttributeBuilder {
-        category: Option<Category>,
+    pub struct AttributeBuilder<'a> {
+        category: Option<Category<'a>>,
         color: Option<Color>,
         payload: Option<Payload>,
-        message: Option<Message>,
+        message: Option<Message<'a>>,
     }
 
     /// Id returned from certain nvtx function calls
@@ -157,44 +171,39 @@ pub mod nvtx {
         }
     }
 
-    impl Category {
-        pub fn new(name: Str, domain: Option<&Domain>) -> Category {
+    impl Category<'static> {
+        pub fn new(name: impl Into<Str>) -> Category<'static> {
             static COUNT: AtomicU32 = AtomicU32::new(0);
             let id: u32 = 1 + COUNT.fetch_add(1, Ordering::SeqCst);
-            match domain {
-                Some(d) => match name {
-                    Str::Ascii(s) => unsafe {
-                        nvtx_sys::ffi::nvtxDomainNameCategoryA(d.handle, id, s.as_ptr())
-                    },
-                    Str::Unicode(s) => unsafe {
-                        nvtx_sys::ffi::nvtxDomainNameCategoryW(d.handle, id, s.as_ptr().cast())
-                    },
-                },
-                None => match name {
-                    Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameCategoryA(id, s.as_ptr()) },
-                    Str::Unicode(s) => unsafe {
-                        nvtx_sys::ffi::nvtxNameCategoryW(id, s.as_ptr().cast())
-                    },
+            match name.into() {
+                Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameCategoryA(id, s.as_ptr()) },
+                Str::Unicode(s) => unsafe {
+                    nvtx_sys::ffi::nvtxNameCategoryW(id, s.as_ptr().cast())
                 },
             }
-            Category { id }
+            Category {
+                id,
+                _lifetime: PhantomData,
+            }
         }
     }
 
     impl Domain {
-        pub fn new(name: Str) -> Self {
+        pub fn new(name: impl Into<Str>) -> Self {
             Domain {
-                handle: match name {
+                handle: match name.into() {
                     Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
                     Str::Unicode(s) => unsafe {
                         nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
                     },
                 },
+                registered_strings: vec![],
+                registered_categories: 0,
             }
         }
 
-        pub fn register_string(self: &Self, string: Str) -> RegisteredString {
-            let handle = match string {
+        pub fn register_string(&mut self, string: impl Into<Str>) -> RegisteredStringHandle {
+            let handle = match string.into() {
                 Str::Ascii(s) => unsafe {
                     nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
                 },
@@ -202,7 +211,38 @@ pub mod nvtx {
                     nvtx_sys::ffi::nvtxDomainRegisterStringW(self.handle, s.as_ptr().cast())
                 },
             };
-            RegisteredString { handle }
+            self.registered_strings.push(RegisteredString { handle });
+            RegisteredStringHandle {
+                id: self.registered_strings.len() - 1,
+            }
+        }
+
+        pub fn get_registered_string(
+            &self,
+            handle: RegisteredStringHandle,
+        ) -> Option<&RegisteredString> {
+            self.registered_strings.get(handle.id)
+        }
+
+        pub fn register_category(&mut self, name: impl Into<Str>) -> CategoryHandle {
+            self.registered_categories += 1;
+            let id = self.registered_categories;
+            match name.into() {
+                Str::Ascii(s) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainNameCategoryA(self.handle, id, s.as_ptr())
+                },
+                Str::Unicode(s) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainNameCategoryW(self.handle, id, s.as_ptr().cast())
+                },
+            }
+            CategoryHandle { id }
+        }
+
+        pub fn get_registered_category(&self, handle: CategoryHandle) -> Option<Category<'_>> {
+            (handle.id <= self.registered_categories).then(|| Category {
+                id: handle.id,
+                _lifetime: PhantomData,
+            })
         }
 
         pub fn mark(self: &Self, attr: Attribute) {
@@ -245,14 +285,14 @@ pub mod nvtx {
         }
     }
 
-    impl<'a> From<&'a CStr> for Str {
-        fn from(v: &'a CStr) -> Self {
+    impl From<&CStr> for Str {
+        fn from(v: &CStr) -> Self {
             Self::Ascii(CString::from(v))
         }
     }
 
-    impl<'a> From<&'a WideCStr> for Str {
-        fn from(v: &'a WideCStr) -> Self {
+    impl From<&WideCStr> for Str {
+        fn from(v: &WideCStr) -> Self {
             Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
         }
     }
@@ -263,13 +303,13 @@ pub mod nvtx {
         }
     }
 
-    impl From<RegisteredString> for Message {
-        fn from(v: RegisteredString) -> Self {
+    impl<'a> From<&'a RegisteredString> for Message<'a> {
+        fn from(v: &'a RegisteredString) -> Self {
             Self::Registered(v)
         }
     }
 
-    impl From<Str> for Message {
+    impl From<Str> for Message<'_> {
         fn from(v: Str) -> Self {
             match v {
                 Str::Ascii(s) => Message::Ascii(s),
@@ -278,38 +318,38 @@ pub mod nvtx {
         }
     }
 
-    impl Attribute {
-        pub fn builder() -> AttributeBuilder {
+    impl<'a> Attribute<'a> {
+        pub fn builder() -> AttributeBuilder<'a> {
             AttributeBuilder::new()
         }
     }
 
-    impl AttributeBuilder {
-        fn new() -> AttributeBuilder {
+    impl<'a> AttributeBuilder<'a> {
+        fn new() -> AttributeBuilder<'a> {
             AttributeBuilder::default()
         }
 
-        pub fn category(mut self, category: Category) -> AttributeBuilder {
-            self.category = Some(category);
+        pub fn category(mut self, category: impl Into<Category<'a>>) -> AttributeBuilder<'a> {
+            self.category = Some(category.into());
             self
         }
 
-        pub fn color(mut self, color: Color) -> AttributeBuilder {
-            self.color = Some(color);
+        pub fn color(mut self, color: impl Into<Color>) -> AttributeBuilder<'a> {
+            self.color = Some(color.into());
             self
         }
 
-        pub fn payload(mut self, payload: Payload) -> AttributeBuilder {
-            self.payload = Some(payload);
+        pub fn payload(mut self, payload: impl Into<Payload>) -> AttributeBuilder<'a> {
+            self.payload = Some(payload.into());
             self
         }
 
-        pub fn message(mut self, message: Message) -> AttributeBuilder {
-            self.message = Some(message);
+        pub fn message(mut self, message: impl Into<Message<'a>>) -> AttributeBuilder<'a> {
+            self.message = Some(message.into());
             self
         }
 
-        pub fn build(self) -> Attribute {
+        pub fn build(self) -> Attribute<'a> {
             Attribute {
                 category: self.category,
                 color: self.color,
@@ -325,8 +365,8 @@ pub mod nvtx {
             Range { id }
         }
 
-        pub fn new_simple(s: Str) -> Range {
-            let id = range_start_simple(s);
+        pub fn new_simple(s: impl Into<Str>) -> Range {
+            let id = range_start_simple(s.into());
             Range { id }
         }
     }
@@ -401,7 +441,7 @@ pub mod nvtx {
         }
     }
 
-    impl TypeValueEncodable for Message {
+    impl<'a> TypeValueEncodable for Message<'a> {
         type Type = nvtx_sys::ffi::nvtxMessageType_t;
         type Value = nvtx_sys::ffi::nvtxMessageValue_t;
 
@@ -414,11 +454,15 @@ pub mod nvtx {
                 ),
                 Message::Unicode(s) => (
                     ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_UNICODE,
-                    Self::Value { unicode: s.as_ptr().cast() },
+                    Self::Value {
+                        unicode: s.as_ptr().cast(),
+                    },
                 ),
                 Message::Registered(r) => (
                     ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_REGISTERED,
-                    Self::Value {registered: r.handle },
+                    Self::Value {
+                        registered: r.handle,
+                    },
                 ),
             }
         }
@@ -426,7 +470,9 @@ pub mod nvtx {
         fn default_encoding() -> (Self::Type, Self::Value) {
             (
                 nvtx_sys::ffi::nvtxMessageType_t_NVTX_MESSAGE_UNKNOWN,
-                Self::Value { ascii: std::ptr::null() },
+                Self::Value {
+                    ascii: std::ptr::null(),
+                },
             )
         }
     }
@@ -436,7 +482,7 @@ pub mod nvtx {
         fn encode(&self) -> Self::Value;
     }
 
-    impl ValueEncodable for Attribute {
+    impl<'a> ValueEncodable for Attribute<'a> {
         type Value = nvtx_sys::ffi::nvtxEventAttributes_t;
 
         fn encode(&self) -> Self::Value {
@@ -476,8 +522,8 @@ pub mod nvtx {
         unsafe { nvtx_sys::ffi::nvtxMarkEx(&attribute) }
     }
 
-    pub fn mark_simple(s: Str) {
-        match s {
+    pub fn mark_simple(s: impl Into<Str>) {
+        match s.into() {
             Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
             Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
         }
@@ -489,8 +535,8 @@ pub mod nvtx {
         RangeId { id }
     }
 
-    pub fn range_start_simple(s: Str) -> RangeId {
-        let id = match s {
+    pub fn range_start_simple(s: impl Into<Str>) -> RangeId {
+        let id = match s .into() {
             Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
             Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
         };
@@ -511,8 +557,8 @@ pub mod nvtx {
         }
     }
 
-    pub fn range_push_simple(s: Str) -> Option<RangeLevel> {
-        let value = match s {
+    pub fn range_push_simple(s: impl Into<Str>) -> Option<RangeLevel> {
+        let value = match s.into() {
             Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
             Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
         };
@@ -535,33 +581,34 @@ pub mod nvtx {
 
 #[cfg(test)]
 mod tests {
-    use crate::nvtx::{
-        self, colors, Attribute, Category, Color, Domain, Message, Payload, Range, Str,
-    };
+    use crate::nvtx::{self, colors, Attribute, Domain, Range};
 
     #[test]
     fn it_works() {
-        let theseus = Domain::new(Str::from("theseus"));
-        let kernel = Category::new(Str::from("Kernel"), Some(&theseus));
-        let registered_string = theseus.register_string(Str::from("A registered string"));
+        let mut theseus = Domain::new("theseus");
+        let category_handle = theseus.register_category("Kernel");
+        let registered_string_handle = theseus.register_string("A registered string");
+        let kernel = theseus.get_registered_category(category_handle).unwrap();
 
-        let msg = Message::from(registered_string);
-        let val = Payload::from(3.14);
-        let color = Color::from(colors::aliceblue);
+        let msg = 
+            theseus
+                .get_registered_string(registered_string_handle)
+                .unwrap();
+        
         theseus.mark(
             Attribute::builder()
-                .color(color)
-                .payload(val)
-                .message(msg.clone())
+                .color(colors::blanchedalmond)
+                .payload(3.14)
+                .message(msg)
                 .build(),
         );
 
         let _ = Range::new(Attribute::builder().category(kernel).message(msg).build());
-        let _ = Range::new_simple(Str::from("hello"));
+        let _ = Range::new_simple("hello");
 
-        let r = nvtx::range_push_simple(Str::from("Test")).unwrap();
-        let s = nvtx::range_start_simple(Str::from("Test 2"));
-        let rr = nvtx::range_pop().unwrap();
+        let r = nvtx::range_push_simple("Test");
+        let s = nvtx::range_start_simple("Test 2");
+        let rr = nvtx::range_pop();
         assert!(r == rr);
         nvtx::range_end(s);
     }
