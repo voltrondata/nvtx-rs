@@ -639,8 +639,8 @@ pub mod nvtx {
         }
     }
 
-    pub fn mark(arg: Argument) {
-        match arg {
+    pub fn mark(arg: impl Into<Argument>) {
+        match arg.into() {
             Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
             Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
             Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a) },
