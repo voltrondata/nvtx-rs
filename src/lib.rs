@@ -91,10 +91,10 @@ pub mod nvtx {
 
     /// Convenience wrapper for all valid argument types
     #[derive(Clone)]
-    pub enum Argument {
+    pub enum Argument<'a> {
         Ascii(CString),
         Unicode(WideCString),
-        EventAttribute(nvtx_sys::ffi::nvtxEventAttributes_t),
+        EventAttribute(Attribute<'a>),
     }
 
     /// Builder to facilitate easier construction of [`Attribute`]
@@ -270,14 +270,17 @@ pub mod nvtx {
                 _lifetime: PhantomData,
             })
         }
+    }
 
-        pub fn mark(self: &Self, arg: impl Into<Argument>) {
+    impl<'a> Domain {
+        pub fn mark(self: &Self, arg: impl Into<Argument<'a>>) {
             let attribute = match arg.into() {
                 Argument::EventAttribute(attr) => attr,
                 Argument::Ascii(s) => Attribute::from(s).into(),
                 Argument::Unicode(s) => Attribute::from(s).into(),
             };
-            unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &attribute) }
+            let encoded = attribute.encode();
+            unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &encoded) }
         }
     }
 
@@ -289,23 +292,15 @@ pub mod nvtx {
 
     impl From<String> for Str {
         fn from(v: String) -> Self {
-            if v.is_ascii() {
-                Self::Ascii(CString::new(v).unwrap())
-            } else {
-                Self::Unicode(
-                    WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
-                )
-            }
+            Self::Unicode(
+                WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
+            )
         }
     }
 
-    impl<'a> From<&'a str> for Str {
-        fn from(v: &'a str) -> Self {
-            if v.is_ascii() {
-                Self::Ascii(CString::new(v).unwrap())
-            } else {
-                Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
-            }
+    impl From<&str> for Str {
+        fn from(v: &str) -> Self {
+            Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
         }
     }
 
@@ -333,35 +328,31 @@ pub mod nvtx {
         }
     }
 
-    impl<'a> From<&'a str> for Argument {
-        fn from(v: &'a str) -> Self {
-            if v.is_ascii() {
-                Self::Ascii(CString::new(v).unwrap())
-            } else {
-                Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
-            }
+    impl From<&str> for Argument<'_> {
+        fn from(v: &str) -> Self {
+            Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
         }
     }
 
-    impl From<CString> for Argument {
+    impl From<CString> for Argument<'_> {
         fn from(v: CString) -> Self {
             Self::Ascii(v)
         }
     }
 
-    impl From<&CStr> for Argument {
+    impl From<&CStr> for Argument<'_> {
         fn from(v: &CStr) -> Self {
             Self::Ascii(CString::from(v))
         }
     }
 
-    impl From<&WideCStr> for Argument {
+    impl From<&WideCStr> for Argument<'_> {
         fn from(v: &WideCStr) -> Self {
             Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
         }
     }
 
-    impl From<WideCString> for Argument {
+    impl From<WideCString> for Argument<'_> {
         fn from(v: WideCString) -> Self {
             Self::Unicode(v)
         }
@@ -375,23 +366,15 @@ pub mod nvtx {
 
     impl From<String> for Message<'_> {
         fn from(v: String) -> Self {
-            if v.is_ascii() {
-                Self::Ascii(CString::new(v).unwrap())
-            } else {
-                Self::Unicode(
-                    WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
-                )
-            }
+            Self::Unicode(
+                WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
+            )
         }
     }
 
-    impl<'a> From<&'a str> for Message<'_> {
-        fn from(v: &'a str) -> Self {
-            if v.is_ascii() {
-                Self::Ascii(CString::new(v).unwrap())
-            } else {
-                Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
-            }
+    impl From<&str> for Message<'_> {
+        fn from(v: &str) -> Self {
+            Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
         }
     }
 
@@ -419,13 +402,13 @@ pub mod nvtx {
         }
     }
 
-    impl<'a> From<CString> for Attribute<'a> {
+    impl From<CString> for Attribute<'_> {
         fn from(s: CString) -> Self {
             AttributeBuilder::default().message(s).build()
         }
     }
 
-    impl<'a> From<WideCString> for Attribute<'a> {
+    impl From<WideCString> for Attribute<'_> {
         fn from(s: WideCString) -> Self {
             AttributeBuilder::default().message(s).build()
         }
@@ -434,6 +417,41 @@ pub mod nvtx {
     impl<'a> From<Message<'a>> for Attribute<'a> {
         fn from(m: Message<'a>) -> Self {
             AttributeBuilder::default().message(m).build()
+        }
+    }
+
+    impl<'a> Attribute<'a> {
+        fn encode(&self) -> nvtx_sys::ffi::nvtxEventAttributes_t {
+            let (color_type, color_value) = self
+                .color
+                .as_ref()
+                .map(|&c| c.encode())
+                .unwrap_or_else(Color::default_encoding);
+            let (payload_type, payload_value) = self
+                .payload
+                .as_ref()
+                .map(|c| c.encode())
+                .unwrap_or_else(Payload::default_encoding);
+            let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
+            let emit = |(t, v)| nvtx_sys::ffi::nvtxEventAttributes_t {
+                version: nvtx_sys::ffi::NVTX_VERSION as u16,
+                size: 48,
+                category: cat,
+                colorType: color_type as i32,
+                color: color_value,
+                payloadType: payload_type as i32,
+                reserved0: 0,
+                payload: payload_value,
+                messageType: t as i32,
+                message: v,
+            };
+            // this is separated as a callable since we need encode() to outlive the call to emit
+            emit(
+                self.message
+                    .as_ref()
+                    .map(|m| m.encode())
+                    .unwrap_or_else(|| Message::default_encoding()),
+            )
         }
     }
 
@@ -468,8 +486,8 @@ pub mod nvtx {
         }
     }
 
-    impl Range {
-        pub fn new(arg: impl Into<Argument>) -> Range {
+    impl<'a> Range {
+        pub fn new(arg: impl Into<Argument<'a>>) -> Range {
             let id = range_start(arg);
             Range { id }
         }
@@ -550,20 +568,19 @@ pub mod nvtx {
         type Value = nvtx_sys::ffi::nvtxMessageValue_t;
 
         fn encode(&self) -> (Self::Type, Self::Value) {
-            use nvtx_sys::ffi;
-            match self {
+            match &self {
                 Message::Ascii(s) => (
-                    ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_ASCII,
+                    nvtx_sys::ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_ASCII,
                     Self::Value { ascii: s.as_ptr() },
                 ),
                 Message::Unicode(s) => (
-                    ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_UNICODE,
+                    nvtx_sys::ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_UNICODE,
                     Self::Value {
                         unicode: s.as_ptr().cast(),
                     },
                 ),
                 Message::Registered(r) => (
-                    ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_REGISTERED,
+                    nvtx_sys::ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_REGISTERED,
                     Self::Value {
                         registered: r.handle,
                     },
@@ -586,40 +603,7 @@ pub mod nvtx {
         fn encode(self) -> Self::Value;
     }
 
-    impl<'a> From<Attribute<'a>> for nvtx_sys::ffi::nvtxEventAttributes_t {
-        fn from(attr: Attribute<'a>) -> Self {
-            let (color_type, color_value) = attr
-                .color
-                .as_ref()
-                .map(|c| c.encode())
-                .unwrap_or_else(Color::default_encoding);
-            let (payload_type, payload_value) = attr
-                .payload
-                .as_ref()
-                .map(|c| c.encode())
-                .unwrap_or_else(Payload::default_encoding);
-            let (msg_type, msg_value) = attr
-                .message
-                .as_ref()
-                .map(|c| c.encode())
-                .unwrap_or_else(Message::default_encoding);
-            let cat = attr.category.as_ref().map(|c| c.id).unwrap_or(0);
-            nvtx_sys::ffi::nvtxEventAttributes_t {
-                version: nvtx_sys::ffi::NVTX_VERSION as u16,
-                size: 48,
-                category: cat,
-                colorType: color_type as i32,
-                color: color_value,
-                payloadType: payload_type as i32,
-                reserved0: 0,
-                payload: payload_value,
-                messageType: msg_type as i32,
-                message: msg_value,
-            }
-        }
-    }
-
-    impl<'a> From<Attribute<'a>> for Argument {
+    impl<'a> From<Attribute<'a>> for Argument<'a> {
         fn from(value: Attribute<'a>) -> Self {
             match value {
                 Attribute {
@@ -639,19 +623,21 @@ pub mod nvtx {
         }
     }
 
-    pub fn mark(arg: impl Into<Argument>) {
-        match arg.into() {
+    pub fn mark<'a>(arg: impl Into<Argument<'a>>) {
+        let argument = arg.into();
+        match &argument {
             Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
             Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
-            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a) },
+            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a.encode()) },
         }
     }
 
-    pub fn range_start(arg: impl Into<Argument>) -> RangeId {
-        let id = match arg.into() {
+    pub fn range_start<'a>(arg: impl Into<Argument<'a>>) -> RangeId {
+        let argument = arg.into();
+        let id = match &argument {
             Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
             Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
-            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&a) },
+            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&a.encode()) },
         };
         RangeId { id }
     }
@@ -660,11 +646,12 @@ pub mod nvtx {
         unsafe { nvtx_sys::ffi::nvtxRangeEnd(range.id) }
     }
 
-    pub fn range_push(arg: impl Into<Argument>) -> Option<RangeLevel> {
-        let value = match arg.into() {
+    pub fn range_push<'a>(arg: impl Into<Argument<'a>>) -> Option<RangeLevel> {
+        let argument = arg.into();
+        let value = match &argument {
             Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
             Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
-            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxRangePushEx(&a) },
+            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxRangePushEx(&a.encode()) },
         };
         if value < 0 {
             None
