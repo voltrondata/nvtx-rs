@@ -8,7 +8,7 @@ pub mod nvtx {
     pub use color_name::colors;
 
     #[doc = "Represents a color in use for controlling appearance within nsight"]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Color {
         /// alpha channel
         a: u8,
@@ -21,7 +21,7 @@ pub mod nvtx {
     }
 
     #[doc = r"Represents a payload value for use within event attributes"]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum Payload {
         Float(f32),
         Double(f64),
@@ -32,13 +32,13 @@ pub mod nvtx {
     }
 
     #[doc = "Handle for a registered nvtx string. See Domain::register_string"]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct RegisteredString {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
     }
 
     #[doc = "Represents a category for use with event and range grouping"]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Category {
         id: u32,
     }
@@ -50,6 +50,14 @@ pub mod nvtx {
     }
 
     #[doc = "A convenience wrapper for various string types"]
+    #[derive(Debug, Clone)]
+    pub enum StrType {
+        Ascii(CString),
+        Unicode(CString),
+    }
+
+    #[doc = "A convenience wrapper for various string types"]
+    #[derive(Debug, Clone)]
     pub enum Str<'a> {
         CLikeString(CString),
         RustString(String),
@@ -57,50 +65,16 @@ pub mod nvtx {
         RustStr(&'a str),
     }
 
-    impl<'a> Str<'a> {
-        fn make_from(value: Str<'a>) -> CString {
-            match value {
-                Str::CLikeString(x) => x,
-                Str::RustString(x) => CString::new(x).unwrap(),
-                Str::CLikeStr(x) => CString::new(x.to_str().unwrap()).unwrap(),
-                Str::RustStr(x) => CString::new(x).unwrap(),
-            }
-        }
-    }
-
-    impl From<CString> for Str<'_> {
-        fn from(v: CString) -> Self {
-            Self::CLikeString(v)
-        }
-    }
-
-    impl From<String> for Str<'_> {
-        fn from(v: String) -> Self {
-            Self::RustString(v)
-        }
-    }
-
-    impl<'a> From<&'a str> for Str<'a> {
-        fn from(v: &'a str) -> Self {
-            Self::RustStr(v)
-        }
-    }
-
-    impl<'a> From<&'a CStr> for Str<'a> {
-        fn from(v: &'a CStr) -> Self {
-            Self::CLikeStr(v)
-        }
-    }
-
     #[doc = "Represents a message for use within events and ranges"]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum Message {
         Ascii(CString),
+        Unicode(CString),
         Registered(RegisteredString),
     }
 
     #[doc = "Model all possible attributes that can be associated with events and ranges"]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct Attribute {
         category: Option<Category>,
         color: Option<Color>,
@@ -118,7 +92,7 @@ pub mod nvtx {
     }
 
     #[doc = "Id returned from certain nvtx function calls"]
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     pub struct RangeId {
         id: nvtx_sys::ffi::nvtxRangeId_t,
     }
@@ -192,12 +166,23 @@ pub mod nvtx {
         pub fn new(name: Str<'_>, domain: Option<&Domain>) -> Category {
             static COUNT: AtomicU32 = AtomicU32::new(0);
             let id: u32 = 1 + COUNT.fetch_add(1, Ordering::SeqCst);
-            let cstring = Str::make_from(name);
             match domain {
-                Some(d) => unsafe {
-                    nvtx_sys::ffi::nvtxDomainNameCategoryA(d.handle, id, cstring.as_ptr())
+                Some(d) => match Str::make_from(name) {
+                    StrType::Ascii(s) => unsafe {
+                        nvtx_sys::ffi::nvtxDomainNameCategoryA(d.handle, id, s.as_ptr())
+                    },
+                    StrType::Unicode(s) => unsafe {
+                        nvtx_sys::ffi::nvtxDomainNameCategoryW(d.handle, id, s.as_ptr().cast())
+                    },
                 },
-                None => unsafe { nvtx_sys::ffi::nvtxNameCategoryA(id, cstring.as_ptr()) },
+                None => match Str::make_from(name) {
+                    StrType::Ascii(s) => unsafe {
+                        nvtx_sys::ffi::nvtxNameCategoryA(id, s.as_ptr())
+                    },
+                    StrType::Unicode(s) => unsafe {
+                        nvtx_sys::ffi::nvtxNameCategoryW(id, s.as_ptr().cast())
+                    },
+                },
             }
             Category { id }
         }
@@ -205,32 +190,72 @@ pub mod nvtx {
 
     impl Domain {
         pub fn new(name: Str<'_>) -> Self {
-            let cstring = Str::make_from(name);
             Domain {
-                handle: unsafe { nvtx_sys::ffi::nvtxDomainCreateA(cstring.as_ptr()) },
+                handle: match Str::make_from(name) {
+                    StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
+                    StrType::Unicode(s) => unsafe {
+                        nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
+                    },
+                },
             }
         }
 
         pub fn register_string(self: &Self, string: Str<'_>) -> RegisteredString {
-            let cstring = Str::make_from(string);
-            unsafe {
-                let handle =
-                    nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, cstring.as_ptr());
-                RegisteredString { handle }
-            }
+            let handle = match Str::make_from(string) {
+                StrType::Ascii(s) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
+                },
+                StrType::Unicode(s) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
+                },
+            };
+            RegisteredString { handle }
         }
 
         pub fn mark(self: &Self, attr: Attribute) {
-            unsafe {
-                let attribute = attr.encode();
-                nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &attribute)
-            }
+            let attribute = attr.encode();
+            unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &attribute) }
         }
     }
 
     impl Drop for Domain {
         fn drop(&mut self) {
             unsafe { nvtx_sys::ffi::nvtxDomainDestroy(self.handle) }
+        }
+    }
+
+    impl<'a> Str<'a> {
+        fn make_from(value: Str<'a>) -> StrType {
+            match value {
+                Str::CLikeString(x) => StrType::Ascii(x),
+                Str::RustString(x) => StrType::Unicode(CString::new(x).unwrap()),
+                Str::CLikeStr(x) => StrType::Ascii(CString::new(x.to_str().unwrap()).unwrap()),
+                Str::RustStr(x) => StrType::Unicode(CString::new(x).unwrap()),
+            }
+        }
+    }
+
+    impl From<CString> for Str<'_> {
+        fn from(v: CString) -> Self {
+            Self::CLikeString(v)
+        }
+    }
+
+    impl From<String> for Str<'_> {
+        fn from(v: String) -> Self {
+            Self::RustString(v)
+        }
+    }
+
+    impl<'a> From<&'a str> for Str<'a> {
+        fn from(v: &'a str) -> Self {
+            Self::RustStr(v)
+        }
+    }
+
+    impl<'a> From<&'a CStr> for Str<'a> {
+        fn from(v: &'a CStr) -> Self {
+            Self::CLikeStr(v)
         }
     }
 
@@ -242,7 +267,10 @@ pub mod nvtx {
 
     impl<'a> From<Str<'a>> for Message {
         fn from(v: Str<'a>) -> Self {
-            Self::Ascii(Str::make_from(v))
+            match Str::make_from(v) {
+                StrType::Ascii(s) => Message::Ascii(s),
+                StrType::Unicode(s) => Message::Unicode(s),
+            }
         }
     }
 
@@ -293,15 +321,20 @@ pub mod nvtx {
     }
 
     impl Range {
-        pub fn new(attr: &Attribute) -> Range {
+        pub fn new(attr: Attribute) -> Range {
             let id = range_start(attr);
+            Range { id }
+        }
+
+        pub fn new_simple(s: Str) -> Range {
+            let id = range_start_simple(s);
             Range { id }
         }
     }
 
     impl Drop for Range {
         fn drop(&mut self) {
-            range_end(&self.id)
+            range_end(self.id)
         }
     }
 
@@ -381,6 +414,10 @@ pub mod nvtx {
                     ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_ASCII,
                     nvtx_sys::ffi::nvtxMessageValue_t { ascii: s.as_ptr() },
                 ),
+                Message::Unicode(s) => (
+                    ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_UNICODE,
+                    nvtx_sys::ffi::nvtxMessageValue_t { ascii: s.as_ptr() },
+                ),
                 Message::Registered(r) => (
                     ffi::nvtxMessageType_t_NVTX_MESSAGE_TYPE_REGISTERED,
                     nvtx_sys::ffi::nvtxMessageValue_t {
@@ -440,26 +477,51 @@ pub mod nvtx {
         }
     }
 
-    pub fn mark(attr: &Attribute) {
-        unsafe {
-            let attribute = attr.encode();
-            nvtx_sys::ffi::nvtxMarkEx(&attribute)
+    pub fn mark(attr: Attribute) {
+        let attribute = attr.encode();
+        unsafe { nvtx_sys::ffi::nvtxMarkEx(&attribute) }
+    }
+
+    pub fn mark_simple(s: Str) {
+        match Str::make_from(s) {
+            StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
+            StrType::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
         }
     }
 
-    pub fn range_start(attr: &Attribute) -> RangeId {
+    pub fn range_start(attr: Attribute) -> RangeId {
         let attribute = attr.encode();
         let id = unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&attribute) };
         RangeId { id }
     }
 
-    pub fn range_end(range: &RangeId) {
+    pub fn range_start_simple(s: Str) -> RangeId {
+        let id = match Str::make_from(s) {
+            StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
+            StrType::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
+        };
+        RangeId { id }
+    }
+
+    pub fn range_end(range: RangeId) {
         unsafe { nvtx_sys::ffi::nvtxRangeEnd(range.id) }
     }
 
-    pub fn range_push(attr: &Attribute) -> Option<RangeLevel> {
+    pub fn range_push(attr: Attribute) -> Option<RangeLevel> {
         let attribute = attr.encode();
         let res = unsafe { nvtx_sys::ffi::nvtxRangePushEx(&attribute) };
+        if res < 0 {
+            None
+        } else {
+            Some(res)
+        }
+    }
+
+    pub fn range_push_simple(s: Str) -> Option<RangeLevel> {
+        let res = match Str::make_from(s) {
+            StrType::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
+            StrType::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
+        };
         if res < 0 {
             None
         } else {
@@ -479,21 +541,34 @@ pub mod nvtx {
 
 #[cfg(test)]
 mod tests {
-    use crate::nvtx;
+    use crate::nvtx::{
+        self, colors, Attribute, Category, Color, Domain, Message, Payload, Range, Str,
+    };
 
     #[test]
     fn it_works() {
-        let theseus = nvtx::Domain::new(nvtx::Str::from("theseus"));
-        let kernel = nvtx::Category::new(nvtx::Str::from("Kernel"), Some(&theseus));
-        let registered_string = theseus.register_string(nvtx::Str::from("A registered string"));
+        let theseus = Domain::new(Str::from("theseus"));
+        let kernel = Category::new(Str::from("Kernel"), Some(&theseus));
+        let registered_string = theseus.register_string(Str::from("A registered string"));
 
+        let msg = Message::from(registered_string);
+        let val = Payload::from(3.14);
+        let color = Color::from(colors::aliceblue);
         theseus.mark(
-            nvtx::Attribute::builder()
-                .color(nvtx::Color::from(nvtx::colors::aliceblue))
-                .category(kernel)
-                .payload(nvtx::Payload::from(3.14))
-                .message(nvtx::Message::from(registered_string))
+            Attribute::builder()
+                .color(color)
+                .payload(val)
+                .message(msg.clone())
                 .build(),
-        )
+        );
+
+        let _ = Range::new(Attribute::builder().category(kernel).message(msg).build());
+        let _ = Range::new_simple(Str::from("hello"));
+
+        let r = nvtx::range_push_simple(Str::from("Test")).unwrap();
+        let s = nvtx::range_start_simple(Str::from("Test 2"));
+        let rr = nvtx::range_pop().unwrap();
+        assert!(r == rr);
+        nvtx::range_end(s);
     }
 }
