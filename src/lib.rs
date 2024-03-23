@@ -226,9 +226,8 @@ pub mod nvtx {
 
     impl Domain {
         pub fn new(name: impl Into<Str>) -> Self {
-            let materialized_name = name.into();
-            let domain = Domain {
-                handle: match &materialized_name {
+            Domain {
+                handle: match name.into() {
                     Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
                     Str::Unicode(s) => unsafe {
                         nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
@@ -236,14 +235,11 @@ pub mod nvtx {
                 },
                 registered_strings: vec![],
                 registered_categories: 0,
-            };
-            println!("Domain: {:#?}", domain.handle);
-            domain
+            }
         }
 
         pub fn register_string(&mut self, string: impl Into<Str>) -> RegisteredStringHandle {
-            let materialized_string = string.into();
-            let handle = match &materialized_string {
+            let handle = match string.into() {
                 Str::Ascii(s) => unsafe {
                     nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
                 },
