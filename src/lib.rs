@@ -33,18 +33,21 @@ pub mod nvtx {
     }
 
     /// Type for a registered nvtx string. See [`Domain::register_string`] and [`Domain::get_registered_string`]
+    #[must_use]
     #[derive(Debug, Clone)]
     pub struct RegisteredString {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
     }
 
     /// Handle for retrieving a registered string. See [`Domain::register_string`] and [`Domain::get_registered_string`]
+    #[must_use = "The returned handle should be bound for subsequent use within Domain::get_registered_string"]
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
     pub struct RegisteredStringHandle {
         id: usize,
     }
 
     /// Represents a category for use with event and range grouping.
+    #[must_use = "The returned category should be bound for subsequent use"]
     #[derive(Debug, Clone, Copy)]
     pub struct Category<'a> {
         id: u32,
@@ -52,12 +55,14 @@ pub mod nvtx {
     }
 
     /// Handle for retrieving a maintained category
+    #[must_use = "The returned handle should be bound for subsequent use within Domain::get_registered_category"]
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
     pub struct CategoryHandle {
         id: u32,
     }
 
     /// Represents a domain for high-level grouping
+    #[must_use = "The returned domain should be bound for subsequent use"]
     #[derive(Debug)]
     pub struct Domain {
         handle: nvtx_sys::ffi::nvtxDomainHandle_t,
@@ -107,21 +112,26 @@ pub mod nvtx {
     }
 
     /// Id returned from certain nvtx function calls
+    #[must_use = "The returned id must be bound for use with range_end()"]
     #[derive(Debug, Copy, Clone)]
-    pub struct RangeId {
+    pub struct RangeId<'a> {
         id: nvtx_sys::ffi::nvtxRangeId_t,
+        _lifetime: PhantomData<&'a ()>,
     }
 
     /// A RAII-like wrapper for range creation and destruction
+    #[must_use]
     #[derive(Debug)]
-    pub struct Range {
-        id: RangeId,
+    pub struct Range<'a> {
+        id: RangeId<'a>,
+        _lifetime: PhantomData<&'a ()>,
     }
 
     /// Opaque type for inspecting returned levels from Push/Pop
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct RangeLevel {
+    pub struct RangeLevel<'a> {
         value: i32,
+        _lifetime: PhantomData<&'a ()>,
     }
 
     impl From<[u8; 3]> for Color {
@@ -216,8 +226,9 @@ pub mod nvtx {
 
     impl Domain {
         pub fn new(name: impl Into<Str>) -> Self {
-            Domain {
-                handle: match name.into() {
+            let materialized_name = name.into();
+            let domain = Domain {
+                handle: match &materialized_name {
                     Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
                     Str::Unicode(s) => unsafe {
                         nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
@@ -225,11 +236,14 @@ pub mod nvtx {
                 },
                 registered_strings: vec![],
                 registered_categories: 0,
-            }
+            };
+            println!("Domain: {:#?}", domain.handle);
+            domain
         }
 
         pub fn register_string(&mut self, string: impl Into<Str>) -> RegisteredStringHandle {
-            let handle = match string.into() {
+            let materialized_string = string.into();
+            let handle = match &materialized_string {
                 Str::Ascii(s) => unsafe {
                     nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
                 },
@@ -269,6 +283,68 @@ pub mod nvtx {
                 id: handle.id,
                 _lifetime: PhantomData,
             })
+        }
+
+        pub fn range_start<'a>(&self, arg: impl Into<Argument<'a>>) -> RangeId {
+            let argument = arg.into();
+            let id = match argument {
+                Argument::Ascii(s) => {
+                    let a = AttributeBuilder::default().message(s).build();
+                    unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(self.handle, &a.encode()) }
+                }
+                Argument::Unicode(s) => {
+                    let a = AttributeBuilder::default().message(s).build();
+                    unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(self.handle, &a.encode()) }
+                }
+                Argument::EventAttribute(a) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainRangeStartEx(self.handle, &a.encode())
+                },
+            };
+            RangeId {
+                id,
+                _lifetime: PhantomData,
+            }
+        }
+
+        pub fn range_end(&self, range: RangeId) {
+            unsafe { nvtx_sys::ffi::nvtxDomainRangeEnd(self.handle, range.id) }
+        }
+
+        pub fn range_push<'a>(&self, arg: impl Into<Argument<'a>>) -> Option<RangeLevel<'a>> {
+            let argument = arg.into();
+            let value = match argument {
+                Argument::Ascii(s) => {
+                    let a = AttributeBuilder::default().message(s).build();
+                    unsafe { nvtx_sys::ffi::nvtxDomainRangePushEx(self.handle, &a.encode()) }
+                }
+                Argument::Unicode(s) => {
+                    let a = AttributeBuilder::default().message(s).build();
+                    unsafe { nvtx_sys::ffi::nvtxDomainRangePushEx(self.handle, &a.encode()) }
+                }
+                Argument::EventAttribute(a) => unsafe {
+                    nvtx_sys::ffi::nvtxDomainRangePushEx(self.handle, &a.encode())
+                },
+            };
+            if value < 0 {
+                None
+            } else {
+                Some(RangeLevel {
+                    value,
+                    _lifetime: PhantomData,
+                })
+            }
+        }
+
+        pub fn range_pop<'a>(&self) -> Option<RangeLevel<'a>> {
+            let value = unsafe { nvtx_sys::ffi::nvtxDomainRangePop(self.handle) };
+            if value < 0 {
+                None
+            } else {
+                Some(RangeLevel {
+                    value,
+                    _lifetime: PhantomData,
+                })
+            }
         }
     }
 
@@ -486,14 +562,17 @@ pub mod nvtx {
         }
     }
 
-    impl<'a> Range {
-        pub fn new(arg: impl Into<Argument<'a>>) -> Range {
+    impl<'a> Range<'a> {
+        pub fn new(arg: impl Into<Argument<'a>>) -> Range<'a> {
             let id = range_start(arg);
-            Range { id }
+            Range {
+                id,
+                _lifetime: PhantomData,
+            }
         }
     }
 
-    impl Drop for Range {
+    impl<'a> Drop for Range<'a> {
         fn drop(&mut self) {
             range_end(self.id)
         }
@@ -632,21 +711,24 @@ pub mod nvtx {
         }
     }
 
-    pub fn range_start<'a>(arg: impl Into<Argument<'a>>) -> RangeId {
+    pub fn range_start<'a>(arg: impl Into<Argument<'a>>) -> RangeId<'a> {
         let argument = arg.into();
         let id = match &argument {
             Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
             Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
             Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&a.encode()) },
         };
-        RangeId { id }
+        RangeId {
+            id,
+            _lifetime: PhantomData,
+        }
     }
 
     pub fn range_end(range: RangeId) {
         unsafe { nvtx_sys::ffi::nvtxRangeEnd(range.id) }
     }
 
-    pub fn range_push<'a>(arg: impl Into<Argument<'a>>) -> Option<RangeLevel> {
+    pub fn range_push<'a>(arg: impl Into<Argument<'a>>) -> Option<RangeLevel<'a>> {
         let argument = arg.into();
         let value = match &argument {
             Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
@@ -656,16 +738,22 @@ pub mod nvtx {
         if value < 0 {
             None
         } else {
-            Some(RangeLevel { value })
+            Some(RangeLevel {
+                value,
+                _lifetime: PhantomData,
+            })
         }
     }
 
-    pub fn range_pop() -> Option<RangeLevel> {
+    pub fn range_pop<'a>() -> Option<RangeLevel<'a>> {
         let value = unsafe { nvtx_sys::ffi::nvtxRangePop() };
         if value < 0 {
             None
         } else {
-            Some(RangeLevel { value })
+            Some(RangeLevel {
+                value,
+                _lifetime: PhantomData,
+            })
         }
     }
 }
