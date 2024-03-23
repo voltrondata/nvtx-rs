@@ -286,20 +286,12 @@ pub mod nvtx {
         }
 
         pub fn range_start<'a>(&self, arg: impl Into<Argument<'a>>) -> RangeId {
-            let argument = arg.into();
-            let id = match argument {
-                Argument::Ascii(s) => {
-                    let a = AttributeBuilder::default().message(s).build();
-                    unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(self.handle, &a.encode()) }
-                }
-                Argument::Unicode(s) => {
-                    let a = AttributeBuilder::default().message(s).build();
-                    unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(self.handle, &a.encode()) }
-                }
-                Argument::EventAttribute(a) => unsafe {
-                    nvtx_sys::ffi::nvtxDomainRangeStartEx(self.handle, &a.encode())
-                },
+            let arg = match arg.into() {
+                Argument::EventAttribute(a) => a,
+                Argument::Ascii(s) => AttributeBuilder::default().message(s).build(),
+                Argument::Unicode(s) => AttributeBuilder::default().message(s).build(),
             };
+            let id = unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(self.handle, &arg.encode()) };
             RangeId {
                 id,
                 _lifetime: PhantomData,
@@ -311,20 +303,12 @@ pub mod nvtx {
         }
 
         pub fn range_push<'a>(&self, arg: impl Into<Argument<'a>>) -> Option<RangeLevel<'a>> {
-            let argument = arg.into();
-            let value = match argument {
-                Argument::Ascii(s) => {
-                    let a = AttributeBuilder::default().message(s).build();
-                    unsafe { nvtx_sys::ffi::nvtxDomainRangePushEx(self.handle, &a.encode()) }
-                }
-                Argument::Unicode(s) => {
-                    let a = AttributeBuilder::default().message(s).build();
-                    unsafe { nvtx_sys::ffi::nvtxDomainRangePushEx(self.handle, &a.encode()) }
-                }
-                Argument::EventAttribute(a) => unsafe {
-                    nvtx_sys::ffi::nvtxDomainRangePushEx(self.handle, &a.encode())
-                },
+            let arg = match arg.into() {
+                Argument::EventAttribute(a) => a,
+                Argument::Ascii(s) => AttributeBuilder::default().message(s).build(),
+                Argument::Unicode(s) => AttributeBuilder::default().message(s).build(),
             };
+            let value = unsafe { nvtx_sys::ffi::nvtxDomainRangePushEx(self.handle, &arg.encode()) };
             if value < 0 {
                 None
             } else {
