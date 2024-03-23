@@ -31,9 +31,10 @@ fn main() {
                             .build(),
                     );
                     thread::sleep(time::Duration::from_millis(10));
-                    nvtx::range_end(inner);
+                    inner.end();
                     if j == i / 2 {
-                        nvtx::range_end(iter);
+                        // we clone here since we conditionally end within an inner-loop iteration
+                        iter.clone().end();
                     }
                 }
                 thread::sleep(time::Duration::from_millis(5));
@@ -41,7 +42,8 @@ fn main() {
         }
         thread::sleep(time::Duration::from_millis(10));
         if i == 15 {
-            nvtx::range_end(app);
+            // we clone here since we conditionally end within an inner-loop iteration
+            app.clone().end();
         }
     }
 }

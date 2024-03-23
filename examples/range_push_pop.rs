@@ -3,7 +3,7 @@ use std::{thread, time};
 use nvtx_rs::nvtx;
 
 fn main() {
-    let _ = nvtx::range_push(
+    let app = nvtx::range_push(
         nvtx::AttributeBuilder::default()
             .color(nvtx::colors::salmon)
             .message("Entire Application 🦀")
@@ -12,7 +12,7 @@ fn main() {
     thread::sleep(time::Duration::from_millis(50));
     for i in 1..=20 {
         {
-            let _ = nvtx::range_push(
+            let rng = nvtx::range_push(
                 nvtx::AttributeBuilder::default()
                     .color(nvtx::colors::cornflowerblue)
                     .message(format!("Iteration Number {}", i))
@@ -28,13 +28,12 @@ fn main() {
                         .build(),
                 );
                 thread::sleep(time::Duration::from_millis(j));
-                let stop_id = nvtx::range_pop();
-                assert!(start_id == stop_id);
+                start_id.pop();
                 thread::sleep(time::Duration::from_millis(5));
             }
-            nvtx::range_pop();
+            rng.pop();
         }
         thread::sleep(time::Duration::from_millis(25));
     }
-    nvtx::range_pop();
+    app.pop();
 }
