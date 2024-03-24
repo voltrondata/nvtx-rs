@@ -186,7 +186,7 @@ pub mod nvtx {
     }
 
     /// Handle for retrieving a registered string. See [`Domain::register_string`] and [`Domain::get_registered_string`]
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     pub struct RegisteredString<'a> {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
         _lifetime: PhantomData<&'a ()>,
@@ -499,12 +499,12 @@ pub mod nvtx {
             let (color_type, color_value) = self
                 .color
                 .as_ref()
-                .map(|&c| c.encode())
+                .map(Color::encode)
                 .unwrap_or_else(Color::default_encoding);
             let (payload_type, payload_value) = self
                 .payload
                 .as_ref()
-                .map(|c| c.encode())
+                .map(Payload::encode)
                 .unwrap_or_else(Payload::default_encoding);
             let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
             let emit = |(t, v)| nvtx_sys::ffi::nvtxEventAttributes_t {
@@ -523,8 +523,8 @@ pub mod nvtx {
             emit(
                 self.message
                     .as_ref()
-                    .map(|m| m.encode())
-                    .unwrap_or_else(|| Message::default_encoding()),
+                    .map(Message::encode)
+                    .unwrap_or_else(Message::default_encoding),
             )
         }
     }
@@ -548,7 +548,7 @@ pub mod nvtx {
     }
 
     /// Convenience wrapper for all valid argument types
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     pub enum Argument<'a> {
         /// discriminant for an owned ASCII string
         Ascii(CString),
@@ -609,7 +609,7 @@ pub mod nvtx {
     }
 
     /// Builder to facilitate easier construction of [`Attribute`]
-    #[derive(Default)]
+    #[derive(Debug, Clone, Default)]
     pub struct AttributeBuilder<'a> {
         category: Option<&'a Category<'a>>,
         color: Option<Color>,
@@ -662,7 +662,7 @@ pub mod nvtx {
     /// Id returned from certain nvtx function calls
     #[derive(Debug)]
     pub struct Range<'a> {
-        id: Option<nvtx_sys::ffi::nvtxRangeId_t>,
+        id: nvtx_sys::ffi::nvtxRangeId_t,
         domain: Option<&'a Domain>,
     }
 
@@ -680,7 +680,7 @@ pub mod nvtx {
                 };
                 let id = unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(d.handle, &arg.encode()) };
                 Range {
-                    id: Some(id),
+                    id,
                     domain: Some(d),
                 }
             } else {
@@ -694,7 +694,7 @@ pub mod nvtx {
                     },
                 };
                 Range {
-                    id: Some(id),
+                    id,
                     domain: None,
                 }
             }
@@ -703,12 +703,9 @@ pub mod nvtx {
 
     impl<'rng> Drop for Range<'rng> {
         fn drop(&mut self) {
-            if let Some(id) = self.id {
-                match self.domain {
-                    Some(d) => unsafe { nvtx_sys::ffi::nvtxDomainRangeEnd(d.handle, id) },
-                    None => unsafe { nvtx_sys::ffi::nvtxRangeEnd(id) },
-                }
-                self.id = None;
+            match self.domain {
+                Some(d) => unsafe { nvtx_sys::ffi::nvtxDomainRangeEnd(d.handle, self.id) },
+                None => unsafe { nvtx_sys::ffi::nvtxRangeEnd(self.id) },
             }
         }
     }
