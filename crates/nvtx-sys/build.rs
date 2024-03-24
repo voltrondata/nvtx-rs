@@ -13,6 +13,12 @@ fn main() {
         .clang_arg("vendor/nvtx/c/include")
         .header("c/include/wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .generate_cstr(true)
+        .default_alias_style(bindgen::AliasVariation::TypeAlias)
+        .default_enum_style(bindgen::EnumVariation::Rust { non_exhaustive: false })
+        .wrap_unsafe_ops(true)
+        .must_use_type("nvtxRangeId_t")
+        .must_use_type("nvtxStringHandle_t")
         .generate()
         .expect("Unable to generate bindings");
 
