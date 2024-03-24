@@ -4,70 +4,68 @@ use nvtx_rs::nvtx;
 
 fn main() {
     let mut domain = nvtx::Domain::new("Domain");
-    let cat_handles = domain.register_categories(["A", "B"]);
-    let str_handles = domain.register_strings(["alpha", "beta", "gamma"]);
-    let [a, b] = domain.get_registered_categories(cat_handles).map(|h|h.unwrap());
-    let [alpha, beta, gamma] = domain.get_registered_strings(str_handles).map(|h|h.unwrap());
+    let [alpha, beta, gamma] = domain.register_strings(["alpha", "beta", "gamma"]);
+    let [a, b] = domain.register_categories(["A", "B"]);
 
     let _r = domain.range("Duration");
 
-    let r1 = domain.range_start(
+    let r1 = domain.range(
         nvtx::AttributeBuilder::default()
-            .category(a)
+            .category(&a)
             .color(nvtx::colors::olive)
-            .message(alpha)
+            .message(&alpha)
             .build(),
     );
 
     thread::sleep(time::Duration::from_millis(10));
-    let r2 = domain.range_start(
+    let r2 = domain.range(
         nvtx::AttributeBuilder::default()
-            .category(a)
+            .category(&a)
             .color(nvtx::colors::olive)
-            .message(beta)
+            .message(&beta)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
-    let r3 = domain.range_start(
+    let r3 = domain.range(
         nvtx::AttributeBuilder::default()
-            .category(a)
+            .category(&a)
             .color(nvtx::colors::olive)
-            .message(gamma)
+            .message(&gamma)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
-    r1.end();
+    drop(r1);
     thread::sleep(time::Duration::from_millis(10));
-    r2.end();
+    drop(r2);
     thread::sleep(time::Duration::from_millis(10));
-    r3.end();
-    let p1 = domain.range_push(
+    drop(r3);
+    let p1 = domain.range(
         nvtx::AttributeBuilder::default()
-            .category(b)
+            .category(&b)
             .color(nvtx::colors::orangered)
-            .message(alpha)
+            .message(&alpha)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
-    let p2 = domain.range_push(
+    let p2 = domain.range(
         nvtx::AttributeBuilder::default()
-            .category(b)
+            .category(&b)
             .color(nvtx::colors::orangered)
-            .message(beta)
+            .message(&beta)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
-    let p3 = domain.range_push(
+    let p3 = domain.range(
         nvtx::AttributeBuilder::default()
-            .category(b)
+            .category(&b)
             .color(nvtx::colors::orangered)
-            .message(gamma)
+            .message(&gamma)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
-    p3.pop();
+    drop(p3);
     thread::sleep(time::Duration::from_millis(10));
-    p2.pop();
+    drop(p2);
     thread::sleep(time::Duration::from_millis(10));
-    p1.pop();
+    drop(p1);
 }
