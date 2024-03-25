@@ -32,3 +32,15 @@ color-name = ["dep:color-name"]
 color-name = { version = "1.1.0", optional = true }
 nvtx-sys = { path = "crates/nvtx-sys" }
 widestring = "1.0.2"
+
+[[example]]
+name = "domain"
+required-features = ["color-name"]
+
+[[example]]
+name = "range"
+required-features = ["color-name"]
+
+[[example]]
+name = "range_start_end"
+required-features = ["color-name"]
