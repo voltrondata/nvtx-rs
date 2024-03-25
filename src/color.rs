@@ -31,28 +31,24 @@ impl Color {
         Self { a, r, g, b }
     }
 
-    /// Change the transparency channel for the color
-    pub fn transparency(mut self, value: u8) -> Self {
-        self.a = value;
-        self
+    /// Change the alpha channel for the color and yield a new color
+    pub fn with_alpha(&self, a: u8) -> Self {
+        Color { a, ..*self }
     }
 
-    /// Change the red channel for the color
-    pub fn red(mut self, value: u8) -> Self {
-        self.r = value;
-        self
+    /// Change the red channel for the color and yield a new color
+    pub fn with_red(&self, r: u8) -> Self {
+        Color { r, ..*self }
     }
 
-    /// Change the green channel for the color
-    pub fn green(mut self, value: u8) -> Self {
-        self.g = value;
-        self
+    /// Change the green channel for the color and yield a new color
+    pub fn with_green(&self, g: u8) -> Self {
+        Color { g, ..*self }
     }
 
-    /// Change the blue channel for the color
-    pub fn blue(mut self, value: u8) -> Self {
-        self.b = value;
-        self
+    /// Change the blue channel for the color and yield a new color
+    pub fn with_blue(&self, b: u8) -> Self {
+        Color { b, ..*self }
     }
 }
 
@@ -61,7 +57,7 @@ impl TypeValueEncodable for Color {
     type Value = u32;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        let as_u32 = u32::from_ne_bytes([a, r, g, b]);
+        let as_u32 = u32::from_ne_bytes([self.a, self.r, self.g, self.b]);
         (nvtx_sys::ffi::nvtxColorType_t::NVTX_COLOR_ARGB, as_u32)
     }
 
