@@ -1,31 +1,29 @@
 use std::{thread, time};
 
-use nvtx_rs::nvtx;
-
 fn main() {
     // we must hold ranges with a proper name
     // _ will not work since drop() is called immediately
-    let _x = nvtx::range(
-        nvtx::AttributeBuilder::default()
-            .color(nvtx::colors::salmon)
+    let _x = nvtx::Range::new(
+        nvtx::EventAttributesBuilder::default()
+            .color(nvtx::color::salmon)
             .message("Start 🦀")
             .build(),
     );
     thread::sleep(time::Duration::from_millis(5));
     for i in 1..=10 {
         {
-            let _rng = nvtx::range(
-                nvtx::AttributeBuilder::default()
-                    .color(nvtx::colors::cornflowerblue)
+            let _rng = nvtx::Range::new(
+                nvtx::EventAttributesBuilder::default()
+                    .color(nvtx::color::cornflowerblue)
                     .message(format!("Iteration Number {}", i))
                     .payload(i)
                     .build(),
             );
             for j in 1..=i {
                 {
-                    let _r = nvtx::range(
-                        nvtx::AttributeBuilder::default()
-                            .color(nvtx::colors::beige)
+                    let _r = nvtx::Range::new(
+                        nvtx::EventAttributesBuilder::default()
+                            .color(nvtx::color::beige)
                             .payload(j)
                             .message("Inner")
                             .build(),

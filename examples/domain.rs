@@ -1,18 +1,17 @@
 use std::{thread, time};
 
-use nvtx_rs::nvtx;
-
 fn main() {
-    let mut domain = nvtx::Domain::new("Domain");
+    let domain = nvtx::Domain::new("Domain");
     let [alpha, beta, gamma] = domain.register_strings(["alpha", "beta", "gamma"]);
     let [a, b] = domain.register_categories(["A", "B"]);
 
     let _r = domain.range("Duration");
 
     let r1 = domain.range(
-        nvtx::AttributeBuilder::default()
+        domain
+            .event_attributes_builder()
             .category(&a)
-            .color(nvtx::colors::olive)
+            .color(nvtx::color::olive)
             .message(&alpha)
             .build(),
     );
@@ -27,21 +26,24 @@ fn main() {
     thread::sleep(time::Duration::from_millis(10));
     let yy = xx.success();
     thread::sleep(time::Duration::from_millis(10));
-    yy.releasing();
+    let zz = yy.releasing();
+    drop(zz);
 
     thread::sleep(time::Duration::from_millis(10));
     let r2 = domain.range(
-        nvtx::AttributeBuilder::default()
+        domain
+            .event_attributes_builder()
             .category(&a)
-            .color(nvtx::colors::olive)
+            .color(nvtx::color::olive)
             .message(&beta)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
     let r3 = domain.range(
-        nvtx::AttributeBuilder::default()
+        domain
+            .event_attributes_builder()
             .category(&a)
-            .color(nvtx::colors::olive)
+            .color(nvtx::color::olive)
             .message(&gamma)
             .build(),
     );
@@ -51,26 +53,31 @@ fn main() {
     drop(r2);
     thread::sleep(time::Duration::from_millis(10));
     drop(r3);
-    let p1 = domain.range(
-        nvtx::AttributeBuilder::default()
+    let d2 = nvtx::Domain::new("cool");
+
+    let p1 = d2.range(
+        domain
+            .event_attributes_builder()
             .category(&b)
-            .color(nvtx::colors::orangered)
+            .color(nvtx::color::orangered)
             .message(&alpha)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
-    let p2 = domain.range(
-        nvtx::AttributeBuilder::default()
+    let p2 = d2.range(
+        domain
+            .event_attributes_builder()
             .category(&b)
-            .color(nvtx::colors::orangered)
+            .color(nvtx::color::orangered)
             .message(&beta)
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
-    let p3 = domain.range(
-        nvtx::AttributeBuilder::default()
+    let p3 = d2.range(
+        domain
+            .event_attributes_builder()
             .category(&b)
-            .color(nvtx::colors::orangered)
+            .color(nvtx::color::orangered)
             .message(&gamma)
             .build(),
     );

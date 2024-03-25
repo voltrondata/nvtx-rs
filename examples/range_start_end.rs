@@ -1,31 +1,29 @@
 use std::{thread, time};
 
-use nvtx_rs::nvtx;
-
 fn main() {
     // we must hold ranges with a proper name
     // _ will not work since drop() is called immediately
-    let mut app = Some(nvtx::range(
-        nvtx::AttributeBuilder::default()
-            .color(nvtx::colors::salmon)
+    let mut app = Some(nvtx::Range::new(
+        nvtx::EventAttributesBuilder::default()
+            .color(nvtx::color::salmon)
             .message("Start 🦀")
             .build(),
     ));
     thread::sleep(time::Duration::from_millis(5));
     for i in 10..=20 {
         {
-            let mut iter = Some(nvtx::range(
-                nvtx::AttributeBuilder::default()
-                    .color(nvtx::colors::cornflowerblue)
+            let mut iter = Some(nvtx::Range::new(
+                nvtx::EventAttributesBuilder::default()
+                    .color(nvtx::color::cornflowerblue)
                     .message(format!("Iteration Number {}", i))
                     .payload(i)
                     .build(),
             ));
             for j in 1..=i {
                 {
-                    let inner = nvtx::range(
-                        nvtx::AttributeBuilder::default()
-                            .color(nvtx::colors::beige)
+                    let inner = nvtx::Range::new(
+                        nvtx::EventAttributesBuilder::default()
+                            .color(nvtx::color::beige)
                             .payload(j)
                             .message("Inner")
                             .build(),
@@ -40,7 +38,7 @@ fn main() {
                 thread::sleep(time::Duration::from_millis(5));
             }
         }
-        
+
         thread::sleep(time::Duration::from_millis(10));
         if i == 15 {
             drop(app.unwrap());

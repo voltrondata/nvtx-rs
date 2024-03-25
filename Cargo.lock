@@ -181,7 +181,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvtx-rs"
+name = "nvtx"
 version = "0.1.0"
 dependencies = [
  "color-name",
