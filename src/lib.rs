@@ -6,6 +6,7 @@
 pub mod nvtx {
 
     pub use color_name::colors;
+    use nvtx_sys::ffi::NVTX_VERSION;
     use std::{
         ffi::{CStr, CString},
         marker::PhantomData,
@@ -20,7 +21,7 @@ pub mod nvtx {
         fn default_encoding() -> (Self::Type, Self::Value);
     }
 
-    /// Represents a color in use for controlling appearance within nsight
+    /// Represents a color in use for controlling appearance within NSight Systems
     #[derive(Debug, Clone, Copy)]
     pub struct Color {
         /// alpha channel
@@ -185,14 +186,14 @@ pub mod nvtx {
         }
     }
 
-    /// Handle for retrieving a registered string. See [`Domain::register_string`] and [`Domain::get_registered_string`]
+    /// Handle for retrieving a registered string. See [`Domain::register_string`] and [`Domain::register_strings`]
     #[derive(Debug, Clone, Copy)]
     pub struct RegisteredString<'a> {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
         _lifetime: PhantomData<&'a ()>,
     }
 
-    /// Represents a category for use with event and range grouping.
+    /// Represents a category for use with event and range grouping. See See [`Domain::register_category`], [`Domain::register_categories`], and [`Category::new`]
     #[derive(Debug, Clone, Copy)]
     pub struct Category<'cat> {
         id: u32,
@@ -200,7 +201,7 @@ pub mod nvtx {
     }
 
     impl Category<'static> {
-        /// Create a new category given something that can be converted into a supported string type
+        /// Create a new category not affiliated with any domain
         pub fn new(name: impl Into<Str>) -> Category<'static> {
             static COUNT: AtomicU32 = AtomicU32::new(0);
             let id: u32 = 1 + COUNT.fetch_add(1, Ordering::SeqCst);
@@ -225,7 +226,7 @@ pub mod nvtx {
     }
 
     impl Domain {
-        /// Create a new domain given a name
+        /// Register a NVTX domain
         pub fn new(name: impl Into<Str>) -> Self {
             Domain {
                 handle: match name.into() {
@@ -238,7 +239,7 @@ pub mod nvtx {
             }
         }
 
-        /// Register a new string to the domain
+        /// Registers an immutable string with NVTX
         pub fn register_string<'domain, 'str: 'domain>(
             &'domain self,
             string: impl Into<Str>,
@@ -257,7 +258,7 @@ pub mod nvtx {
             }
         }
 
-        /// Registers many strings to the domain
+        /// Register many immutable strings with NVTX.
         pub fn register_strings<'domain, 'str: 'domain, const N: usize>(
             &'domain self,
             strings: [impl Into<Str>; N],
@@ -278,7 +279,7 @@ pub mod nvtx {
             })
         }
 
-        /// Register a category to the domain
+        /// Register a new category with the domain. Categories are used to group sets of events.
         pub fn register_category<'domain, 'cat: 'domain>(
             &'domain mut self,
             name: impl Into<Str>,
@@ -299,7 +300,7 @@ pub mod nvtx {
             }
         }
 
-        /// Register many categories to the domain
+        /// Register new categories with the domain. Categories are used to group sets of events.
         pub fn register_categories<'domain, 'cat: 'domain, const N: usize>(
             &'domain mut self,
             names: [impl Into<Str>; N],
@@ -322,23 +323,68 @@ pub mod nvtx {
             })
         }
 
-        /// Yield a mark for this domain
-        pub fn mark<'arg, 'domain: 'arg>(&'domain self, arg: impl Into<Argument<'arg>>) {
+        /// Marks an instantaneous event in the application. A marker can contain a text message or specify additional information using the event attributes structure. These attributes include a text message, color, category, and a payload. Each of the attributes is optional.
+        pub fn mark<'arg, 'domain: 'arg>(&'domain self, arg: impl Into<EventArgument<'arg>>) {
             let attribute = match arg.into() {
-                Argument::EventAttribute(attr) => attr,
-                Argument::Ascii(s) => Attribute::from(s).into(),
-                Argument::Unicode(s) => Attribute::from(s).into(),
+                EventArgument::EventAttribute(attr) => attr,
+                EventArgument::Ascii(s) => EventAttributes::from(s).into(),
+                EventArgument::Unicode(s) => EventAttributes::from(s).into(),
             };
             let encoded = attribute.encode();
             unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &encoded) }
         }
 
-        /// Start a new range which can be moved across thread boundaries
+        /// Start a new range
         pub fn range<'rng, 'arg, 'domain: 'rng + 'arg>(
             &'domain self,
-            arg: impl Into<Argument<'arg>>,
+            arg: impl Into<EventArgument<'arg>>,
         ) -> Range<'rng> {
             Range::new(arg, Some(self))
+        }
+
+        /// Name a resource
+        pub fn name_resource<'res, 'msg, 'domain: 'msg>(
+            &'domain self,
+            identifier: Identifier,
+            name: impl Into<Message<'msg>>,
+        ) -> Resource<'res> {
+            let materialized_name = name.into();
+            let (msg_type, msg_value) = materialized_name.encode();
+            let (id_type, id_value) = identifier.encode();
+            let mut attrs = nvtx_sys::ffi::nvtxResourceAttributes_t {
+                version: NVTX_VERSION as u16,
+                size: 32,
+                identifierType: id_type as i32,
+                identifier: id_value,
+                messageType: msg_type as i32,
+                message: msg_value,
+            };
+            let ptr: *mut nvtx_sys::ffi::nvtxResourceAttributes_v0 = &mut attrs;
+            let handle = unsafe { nvtx_sys::ffi::nvtxDomainResourceCreate(self.handle, ptr) };
+            Resource {
+                handle,
+                _lifetime: PhantomData,
+            }
+        }
+
+        /// Create a user defined synchronization object This is used to track non-OS synchronization working with spinlocks and atomics.
+        pub fn user_sync<'msg, 'user_sync, 'domain: 'msg + 'user_sync>(
+            &'domain self,
+            name: impl Into<Message<'msg>>,
+        ) -> sync::UserSync<'user_sync> {
+            let message = name.into();
+            let (msg_type, msg_value) = message.encode();
+            let attrs = nvtx_sys::ffi::nvtxSyncUserAttributes_t {
+                version: NVTX_VERSION as u16,
+                size: 16,
+                messageType: msg_type as i32,
+                message: msg_value,
+            };
+            let handle = unsafe { nvtx_sys::ffi::nvtxDomainSyncUserCreate(self.handle, &attrs) };
+            sync::UserSync {
+                handle,
+                _lifetime: PhantomData,
+            }
         }
     }
 
@@ -487,14 +533,14 @@ pub mod nvtx {
 
     /// All attributes that are associated with marks and ranges
     #[derive(Debug, Clone)]
-    pub struct Attribute<'a> {
+    pub struct EventAttributes<'a> {
         category: Option<Category<'a>>,
         color: Option<Color>,
         payload: Option<Payload>,
         message: Option<Message<'a>>,
     }
 
-    impl<'a> Attribute<'a> {
+    impl<'a> EventAttributes<'a> {
         fn encode(&self) -> nvtx_sys::ffi::nvtxEventAttributes_t {
             let (color_type, color_value) = self
                 .color
@@ -529,19 +575,19 @@ pub mod nvtx {
         }
     }
 
-    impl From<CString> for Attribute<'_> {
+    impl From<CString> for EventAttributes<'_> {
         fn from(s: CString) -> Self {
             AttributeBuilder::default().message(s).build()
         }
     }
 
-    impl From<WideCString> for Attribute<'_> {
+    impl From<WideCString> for EventAttributes<'_> {
         fn from(s: WideCString) -> Self {
             AttributeBuilder::default().message(s).build()
         }
     }
 
-    impl<'attr, 'msg: 'attr> From<Message<'msg>> for Attribute<'attr> {
+    impl<'attr, 'msg: 'attr> From<Message<'msg>> for EventAttributes<'attr> {
         fn from(m: Message<'msg>) -> Self {
             AttributeBuilder::default().message(m).build()
         }
@@ -549,60 +595,60 @@ pub mod nvtx {
 
     /// Convenience wrapper for all valid argument types
     #[derive(Debug, Clone)]
-    pub enum Argument<'a> {
+    pub enum EventArgument<'a> {
         /// discriminant for an owned ASCII string
         Ascii(CString),
         /// discriminant for an owned Unicode string
         Unicode(WideCString),
         /// discriminant for a detailed Attribute
-        EventAttribute(Attribute<'a>),
+        EventAttribute(EventAttributes<'a>),
     }
 
-    impl<'arg, 'attr: 'arg> From<Attribute<'attr>> for Argument<'arg> {
-        fn from(value: Attribute<'attr>) -> Self {
+    impl<'arg, 'attr: 'arg> From<EventAttributes<'attr>> for EventArgument<'arg> {
+        fn from(value: EventAttributes<'attr>) -> Self {
             match value {
-                Attribute {
+                EventAttributes {
                     category: None,
                     color: None,
                     payload: None,
                     message: Some(Message::Ascii(s)),
-                } => Argument::Ascii(s),
-                Attribute {
+                } => EventArgument::Ascii(s),
+                EventAttributes {
                     category: None,
                     color: None,
                     payload: None,
                     message: Some(Message::Unicode(s)),
-                } => Argument::Unicode(s),
-                attr => Argument::EventAttribute(attr.into()),
+                } => EventArgument::Unicode(s),
+                attr => EventArgument::EventAttribute(attr.into()),
             }
         }
     }
 
-    impl From<&str> for Argument<'_> {
+    impl From<&str> for EventArgument<'_> {
         fn from(v: &str) -> Self {
             Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
         }
     }
 
-    impl From<CString> for Argument<'_> {
+    impl From<CString> for EventArgument<'_> {
         fn from(v: CString) -> Self {
             Self::Ascii(v)
         }
     }
 
-    impl From<&CStr> for Argument<'_> {
+    impl From<&CStr> for EventArgument<'_> {
         fn from(v: &CStr) -> Self {
             Self::Ascii(CString::from(v))
         }
     }
 
-    impl From<&WideCStr> for Argument<'_> {
+    impl From<&WideCStr> for EventArgument<'_> {
         fn from(v: &WideCStr) -> Self {
             Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
         }
     }
 
-    impl From<WideCString> for Argument<'_> {
+    impl From<WideCString> for EventArgument<'_> {
         fn from(v: WideCString) -> Self {
             Self::Unicode(v)
         }
@@ -649,8 +695,8 @@ pub mod nvtx {
         }
 
         /// build the attribute from the builder's state
-        pub fn build(self) -> Attribute<'attr> {
-            Attribute {
+        pub fn build(self) -> EventAttributes<'attr> {
+            EventAttributes {
                 category: self.category.copied(),
                 color: self.color,
                 payload: self.payload,
@@ -659,7 +705,7 @@ pub mod nvtx {
         }
     }
 
-    /// Id returned from certain nvtx function calls
+    /// A RAII-like object for modeling start/end ranges
     #[derive(Debug)]
     pub struct Range<'a> {
         id: nvtx_sys::ffi::nvtxRangeId_t,
@@ -668,15 +714,15 @@ pub mod nvtx {
 
     impl<'rng> Range<'rng> {
         fn new<'arg, 'domain: 'rng + 'arg>(
-            arg: impl Into<Argument<'arg>>,
+            arg: impl Into<EventArgument<'arg>>,
             domain: Option<&'domain Domain>,
         ) -> Range<'rng> {
             let argument = arg.into();
             if let Some(d) = domain {
                 let arg = match argument {
-                    Argument::EventAttribute(a) => a,
-                    Argument::Ascii(s) => AttributeBuilder::default().message(s).build(),
-                    Argument::Unicode(s) => AttributeBuilder::default().message(s).build(),
+                    EventArgument::EventAttribute(a) => a,
+                    EventArgument::Ascii(s) => AttributeBuilder::default().message(s).build(),
+                    EventArgument::Unicode(s) => AttributeBuilder::default().message(s).build(),
                 };
                 let id = unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(d.handle, &arg.encode()) };
                 Range {
@@ -685,18 +731,17 @@ pub mod nvtx {
                 }
             } else {
                 let id = match &argument {
-                    Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
-                    Argument::Unicode(s) => unsafe {
+                    EventArgument::Ascii(s) => unsafe {
+                        nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr())
+                    },
+                    EventArgument::Unicode(s) => unsafe {
                         nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast())
                     },
-                    Argument::EventAttribute(a) => unsafe {
+                    EventArgument::EventAttribute(a) => unsafe {
                         nvtx_sys::ffi::nvtxRangeStartEx(&a.encode())
                     },
                 };
-                Range {
-                    id,
-                    domain: None,
-                }
+                Range { id, domain: None }
             }
         }
     }
@@ -710,19 +755,133 @@ pub mod nvtx {
         }
     }
 
+    /// module for User Synchronization state machine types
+    pub mod sync {
+        use std::marker::PhantomData;
+
+        /// User Defined Synchronization Object
+        pub struct UserSync<'a> {
+            pub(super) handle: nvtx_sys::ffi::nvtxSyncUser_t,
+            pub(super) _lifetime: PhantomData<&'a ()>,
+        }
+
+        impl<'a> UserSync<'a> {
+            /// Signal to tools that an attempt to acquire a user defined synchronization object.
+            pub fn acquire(self) -> UserSyncAcquireStart<'a> {
+                unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireStart(self.handle) }
+                UserSyncAcquireStart { sync_object: self }
+            }
+        }
+
+        impl<'a> Drop for UserSync<'a> {
+            fn drop(&mut self) {
+                unsafe { nvtx_sys::ffi::nvtxDomainSyncUserDestroy(self.handle) }
+            }
+        }
+
+        /// state modeling that the start of acquiring the synchronization object
+        pub struct UserSyncAcquireStart<'a> {
+            sync_object: UserSync<'a>,
+        }
+
+        impl<'a> UserSyncAcquireStart<'a> {
+            /// Signal to tools of failure in acquiring a user defined synchronization object This should be called after [`Self::acquire_start`].
+            pub fn failed(self) -> UserSync<'a> {
+                unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireFailed(self.sync_object.handle) }
+                self.sync_object
+            }
+
+            /// Signal to tools of success in acquiring a user defined synchronization object This should be called after [`Self::acquire_start`].
+            pub fn success(self) -> UserSyncSuccess<'a> {
+                unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireSuccess(self.sync_object.handle) }
+                UserSyncSuccess {
+                    sync_object: self.sync_object,
+                }
+            }
+        }
+
+        /// State modeling that the success of acquiring the synchronization object
+        pub struct UserSyncSuccess<'a> {
+            sync_object: UserSync<'a>,
+        }
+
+        impl<'a> UserSyncSuccess<'a> {
+            /// Signal to tools of releasing a reservation on user defined synchronization object. Returns the original UserSync object.
+            pub fn releasing(self) -> UserSync<'a> {
+                unsafe { nvtx_sys::ffi::nvtxDomainSyncUserReleasing(self.sync_object.handle) }
+                self.sync_object
+            }
+        }
+    }
+
+    /// Identifier used for Resource
+    pub enum Identifier {
+        /// generic pointer
+        Pointer(*const ::std::os::raw::c_void),
+        /// generic handle
+        Handle(u64),
+        /// generic thread native
+        NativeThread(u64),
+        /// generic thread posix
+        PosixThread(u64),
+    }
+
+    impl TypeValueEncodable for Identifier {
+        type Type = u32;
+        type Value = nvtx_sys::ffi::nvtxResourceAttributes_v0_identifier_t;
+
+        fn encode(&self) -> (Self::Type, Self::Value) {
+            match self {
+                Identifier::Pointer(p) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_POINTER as u32, Self::Value{pValue: p.clone()}),
+                Identifier::Handle(h) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32, Self::Value{ullValue: h.clone()}),
+                Identifier::NativeThread(t) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE as u32, Self::Value{ullValue: t.clone()}),
+                Identifier::PosixThread(t) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX as u32, Self::Value{ullValue: t.clone()}),
+            }
+        }
+
+        fn default_encoding() -> (Self::Type, Self::Value) {
+            (
+                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_UNKNOWN as u32,
+                Self::Value { ullValue: 0 },
+            )
+        }
+    }
+
+    /// Named resource handle
+    pub struct Resource<'a> {
+        handle: nvtx_sys::ffi::nvtxResourceHandle_t,
+        _lifetime: PhantomData<&'a ()>,
+    }
+
+    impl<'a> Drop for Resource<'a> {
+        fn drop(&mut self) {
+            unsafe { nvtx_sys::ffi::nvtxDomainResourceDestroy(self.handle) }
+        }
+    }
+
     /// yield a mark to be emitted
-    pub fn mark<'arg>(argument: impl Into<Argument<'arg>>) {
+    pub fn mark<'arg>(argument: impl Into<EventArgument<'arg>>) {
         match argument.into() {
-            Argument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
-            Argument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
-            Argument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a.encode()) },
+            EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
+            EventArgument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
+            EventArgument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a.encode()) },
+        }
+    }
+
+    /// Allows the user to name an active thread of the current process. If an invalid thread ID is provided or a thread ID from a different process is used the behavior of the tool is implementation dependent.
+    pub fn name_thread(thread_id: u32, name: impl Into<Str>) {
+        match name.into() {
+            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadA(thread_id, s.as_ptr()) },
+            Str::Unicode(s) => unsafe {
+                nvtx_sys::ffi::nvtxNameOsThreadA(thread_id, s.as_ptr().cast())
+            },
         }
     }
 
     /// Start a new range which can be moved across thread boundaries
     ///
     /// returns a RAII-friendly type which is automatically ended when dropped
-    pub fn range<'arg, 'rng>(arg: impl Into<Argument<'arg>>) -> Range<'rng> {
+    pub fn range<'arg, 'rng>(arg: impl Into<EventArgument<'arg>>) -> Range<'rng> {
         Range::new(arg, None)
     }
 }
