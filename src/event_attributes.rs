@@ -1,6 +1,5 @@
 use crate::{Category, Color, Message, Payload, TypeValueEncodable};
 
-
 /// All attributes that are associated with marks and ranges
 #[derive(Debug, Clone)]
 pub struct EventAttributes {
@@ -47,7 +46,7 @@ impl EventAttributes {
 
 
 /// Builder to facilitate easier construction of [`EventAttributes`]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct EventAttributesBuilder<'a> {
     pub(super) category: Option<&'a Category>,
     pub(super) color: Option<Color>,

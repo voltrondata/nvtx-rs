@@ -1,7 +1,7 @@
 use std::{thread, time};
 
 fn main() {
-    let domain = nvtx::domain("Domain");
+    let domain = nvtx::Domain::new("Domain");
     let [alpha, beta, gamma] = domain.register_strings(["alpha", "beta", "gamma"]);
     let [a, b] = domain.register_categories(["A", "B"]);
 
@@ -53,7 +53,7 @@ fn main() {
     drop(r2);
     thread::sleep(time::Duration::from_millis(10));
     drop(r3);
-    let d2 = nvtx::domain("cool");
+    let d2 = nvtx::Domain::new("cool");
 
     let p1 = d2.range(
         domain

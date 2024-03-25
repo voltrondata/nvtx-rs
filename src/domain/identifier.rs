@@ -1,6 +1,5 @@
 use crate::TypeValueEncodable;
 
-
 /// Identifier used for Resource
 pub enum Identifier {
     /// generic pointer

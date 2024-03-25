@@ -1,7 +1,5 @@
 use std::ffi::{CStr, CString};
-
 use widestring::WideCString;
-
 
 /// A convenience wrapper for various string types
 #[derive(Debug, Clone)]

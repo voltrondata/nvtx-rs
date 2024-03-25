@@ -1,5 +1,4 @@
 use crate::TypeValueEncodable;
-
 pub use color_name::colors::*;
 
 /// Represents a color in use for controlling appearance within NSight Systems

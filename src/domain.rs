@@ -1,10 +1,19 @@
+pub use self::{
+    category::Category,
+    event_argument::EventArgument,
+    event_attributes::{EventAttributes, EventAttributesBuilder},
+    identifier::Identifier,
+    message::Message,
+    range::Range,
+    registered_string::RegisteredString,
+    resource::Resource,
+};
+pub use crate::sync;
+use crate::{Str, TypeValueEncodable};
 use std::{
     marker::PhantomData,
     sync::atomic::{AtomicU32, Ordering},
 };
-
-use crate::{TypeValueEncodable, Str};
-pub use crate::sync;
 
 mod category;
 mod event_argument;
@@ -14,12 +23,6 @@ mod message;
 mod range;
 mod registered_string;
 mod resource;
-
-pub use self::{
-    category::Category, event_argument::EventArgument, event_attributes::{EventAttributes, EventAttributesBuilder},
-    identifier::Identifier, message::Message, range::Range, registered_string::RegisteredString,
-    resource::Resource,
-};
 
 /// Represents a domain for high-level grouping
 #[derive(Debug)]

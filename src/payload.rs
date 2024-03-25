@@ -1,6 +1,5 @@
 use crate::TypeValueEncodable;
 
-
 /// Represents a payload value for use within event attributes
 #[derive(Debug, Clone, Copy)]
 pub enum Payload {

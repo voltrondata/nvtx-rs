@@ -2,6 +2,18 @@
 
 //! crate for interfacing with NVIDIA's nvtx API
 
+pub use crate::{
+    category::Category,
+    color::Color,
+    domain::Domain,
+    event_argument::EventArgument,
+    event_attributes::{EventAttributes, EventAttributesBuilder},
+    message::Message,
+    payload::Payload,
+    range::Range,
+    str::Str,
+};
+
 /// color support
 pub mod color;
 /// specialized types for use within a domain context
@@ -17,37 +29,11 @@ mod payload;
 mod range;
 mod str;
 
-pub use crate::{
-    category::Category,
-    color::Color,
-    event_argument::EventArgument,
-    event_attributes::{EventAttributes, EventAttributesBuilder},
-    message::Message,
-    payload::Payload,
-    range::Range,
-    str::Str,
-};
-
 trait TypeValueEncodable {
     type Type;
     type Value;
     fn encode(&self) -> (Self::Type, Self::Value);
     fn default_encoding() -> (Self::Type, Self::Value);
-}
-
-/// Create a new domain
-pub fn domain(name: impl Into<Str>) -> domain::Domain {
-    domain::Domain::new(name)
-}
-
-/// Gets a new builder instance for event attribute construction in the default (global) scope
-pub fn event_attributes_builder<'a>() -> EventAttributesBuilder<'a> {
-    EventAttributesBuilder {
-        category: None,
-        color: None,
-        payload: None,
-        message: None,
-    }
 }
 
 /// Marks an instantaneous event in the application. A marker can contain a text message or specify additional information using the event attributes structure. These attributes include a text message, color, category, and a payload. Each of the attributes is optional.
@@ -67,11 +53,6 @@ pub fn name_thread(thread_id: u32, name: impl Into<Str>) {
             nvtx_sys::ffi::nvtxNameOsThreadA(thread_id, s.as_ptr().cast())
         },
     }
-}
-
-/// Create an RAII-friendly range type which can (1) be moved across thread boundaries and (2) automatically ended when dropped
-pub fn range(arg: impl Into<EventArgument>) -> Range {
-    Range::new(arg)
 }
 
 /// Register a new category within the default (global) scope. Categories are used to group sets of events.

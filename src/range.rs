@@ -1,7 +1,5 @@
 use crate::event_argument::EventArgument;
 
-
-
 /// A RAII-like object for modeling start/end Ranges
 #[derive(Debug)]
 pub struct Range {
@@ -9,7 +7,8 @@ pub struct Range {
 }
 
 impl Range {
-    pub(super) fn new(arg: impl Into<EventArgument>) -> Range {
+    /// Create an RAII-friendly range type which can (1) be moved across thread boundaries and (2) automatically ended when dropped
+    pub fn new(arg: impl Into<EventArgument>) -> Range {
         let argument = arg.into();
         let id = match &argument {
             EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },

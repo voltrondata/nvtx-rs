@@ -1,9 +1,6 @@
-use std::ffi::{CStr, CString};
-
-use widestring::WideCString;
-
 use super::{event_attributes::EventAttributes, message::Message};
-
+use std::ffi::{CStr, CString};
+use widestring::WideCString;
 
 /// Convenience wrapper for all valid argument types
 #[derive(Debug, Clone)]

@@ -3,8 +3,8 @@ use std::{thread, time};
 fn main() {
     // we must hold ranges with a proper name
     // _ will not work since drop() is called immediately
-    let _x = nvtx::range(
-        nvtx::event_attributes_builder()
+    let _x = nvtx::Range::new(
+        nvtx::EventAttributesBuilder::default()
             .color(nvtx::color::salmon)
             .message("Start 🦀")
             .build(),
@@ -12,8 +12,8 @@ fn main() {
     thread::sleep(time::Duration::from_millis(5));
     for i in 1..=10 {
         {
-            let _rng = nvtx::range(
-                nvtx::event_attributes_builder()
+            let _rng = nvtx::Range::new(
+                nvtx::EventAttributesBuilder::default()
                     .color(nvtx::color::cornflowerblue)
                     .message(format!("Iteration Number {}", i))
                     .payload(i)
@@ -21,8 +21,8 @@ fn main() {
             );
             for j in 1..=i {
                 {
-                    let _r = nvtx::range(
-                        nvtx::event_attributes_builder()
+                    let _r = nvtx::Range::new(
+                        nvtx::EventAttributesBuilder::default()
                             .color(nvtx::color::beige)
                             .payload(j)
                             .message("Inner")

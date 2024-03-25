@@ -1,7 +1,5 @@
+use super::{category::Category, message::Message, Domain};
 use crate::{Color, Payload, TypeValueEncodable};
-
-use super::{Domain, category::Category, message::Message};
-
 
 /// All attributes that are associated with marks and ranges
 #[derive(Debug, Clone)]
@@ -51,10 +49,10 @@ impl<'a> EventAttributes<'a> {
 #[derive(Debug, Clone)]
 pub struct EventAttributesBuilder<'a> {
     pub(super) domain: &'a Domain,
-    pub(super)category: Option<&'a Category<'a>>,
-    pub(super)color: Option<Color>,
-    pub(super)payload: Option<Payload>,
-    pub(super)message: Option<Message<'a>>,
+    pub(super) category: Option<&'a Category<'a>>,
+    pub(super) color: Option<Color>,
+    pub(super) payload: Option<Payload>,
+    pub(super) message: Option<Message<'a>>,
 }
 
 impl<'a> EventAttributesBuilder<'a> {

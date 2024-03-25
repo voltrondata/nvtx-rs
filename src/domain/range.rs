@@ -1,6 +1,5 @@
 use super::{Domain,event_argument::EventArgument, event_attributes::EventAttributes, message::Message};
 
-
 /// A RAII-like object for modeling start/end Ranges within a Domain
 #[derive(Debug)]
 pub struct Range<'a> {

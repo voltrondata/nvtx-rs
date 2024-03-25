@@ -1,9 +1,6 @@
-use std::ffi::{CStr, CString};
-
-use widestring::WideCString;
-
 use crate::TypeValueEncodable;
-
+use std::ffi::{CStr, CString};
+use widestring::WideCString;
 
 /// Represents a message for use within events and ranges
 #[derive(Debug, Clone)]
