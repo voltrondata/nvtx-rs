@@ -1,5 +1,7 @@
-use std::env;
-use std::path::{Path, PathBuf};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 fn main() {
     cc::Build::new()
@@ -17,7 +19,9 @@ fn main() {
         .allowlist_recursively(false)
         .generate_cstr(true)
         .default_alias_style(bindgen::AliasVariation::TypeAlias)
-        .default_enum_style(bindgen::EnumVariation::Rust { non_exhaustive: false })
+        .default_enum_style(bindgen::EnumVariation::Rust {
+            non_exhaustive: false,
+        })
         .wrap_unsafe_ops(true)
         .must_use_type("nvtxRangeId_t")
         .must_use_type("nvtxStringHandle_t")

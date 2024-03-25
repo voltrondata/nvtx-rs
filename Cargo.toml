@@ -5,7 +5,7 @@ members = ["crates/nvtx-sys"]
 version = "0.1.0"
 authors = ["Voltron Data"]
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.70.0"
 description = "NVIDIA NVTX bindings for Rust"
 repository = "https://github.com/voltrondata/nvtx-rs"
 readme = "README.md"
@@ -22,8 +22,25 @@ description.workspace = true
 repository.workspace = true
 readme.workspace = true
 publish.workspace = true
+license.workspace = true
+
+[features]
+default = ["color-name"]
+color-name = ["dep:color-name"]
 
 [dependencies]
+color-name = { version = "1.1.0", optional = true }
 nvtx-sys = { path = "crates/nvtx-sys" }
-color-name = "1.1.0"
 widestring = "1.0.2"
+
+[[example]]
+name = "domain"
+required-features = ["color-name"]
+
+[[example]]
+name = "range"
+required-features = ["color-name"]
+
+[[example]]
+name = "range_start_end"
+required-features = ["color-name"]

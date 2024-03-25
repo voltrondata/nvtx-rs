@@ -1,4 +1,5 @@
 use crate::TypeValueEncodable;
+#[cfg(feature = "color-name")]
 pub use color_name::colors::*;
 
 /// Represents a color in use for controlling appearance within NSight Systems

@@ -2,7 +2,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::Str;
 
-
 /// Represents a category for use with event and range grouping. See [`crate::register_category`], [`crate::register_categories`]
 #[derive(Debug, Clone, Copy)]
 pub struct Category {
