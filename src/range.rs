@@ -23,7 +23,7 @@ impl Range {
     }
 }
 
-impl<'a> Drop for Range {
+impl Drop for Range {
     fn drop(&mut self) {
         unsafe { nvtx_sys::ffi::nvtxRangeEnd(self.id) }
     }

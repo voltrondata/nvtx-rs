@@ -28,7 +28,7 @@ impl<'a> From<EventAttributes<'a>> for EventArgument<'a> {
                 payload: None,
                 message: Some(Message::Unicode(s)),
             } => EventArgument::Unicode(s),
-            attr => EventArgument::EventAttribute(attr.into()),
+            attr => EventArgument::EventAttribute(attr),
         }
     }
 }

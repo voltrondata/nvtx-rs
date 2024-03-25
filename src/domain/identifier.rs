@@ -20,26 +20,26 @@ impl TypeValueEncodable for Identifier {
         match self {
             Identifier::Pointer(p) => (
                 nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_POINTER as u32,
-                Self::Value { pValue: p.clone() },
+                Self::Value { pValue: *p },
             ),
             Identifier::Handle(h) => (
                 nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32,
                 Self::Value {
-                    ullValue: h.clone(),
+                    ullValue: *h,
                 },
             ),
             Identifier::NativeThread(t) => (
                 nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE
                     as u32,
                 Self::Value {
-                    ullValue: t.clone(),
+                    ullValue: *t,
                 },
             ),
             Identifier::PosixThread(t) => (
                 nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX
                     as u32,
                 Self::Value {
-                    ullValue: t.clone(),
+                    ullValue: *t,
                 },
             ),
         }
