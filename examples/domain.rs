@@ -17,6 +17,18 @@ fn main() {
             .build(),
     );
 
+    let x = domain.user_sync("cool");
+    thread::sleep(time::Duration::from_millis(10));
+    let y = x.acquire();
+    thread::sleep(time::Duration::from_millis(10));
+    let z = y.failed();
+    thread::sleep(time::Duration::from_millis(10));
+    let xx = z.acquire();
+    thread::sleep(time::Duration::from_millis(10));
+    let yy = xx.success();
+    thread::sleep(time::Duration::from_millis(10));
+    yy.releasing();
+
     thread::sleep(time::Duration::from_millis(10));
     let r2 = domain.range(
         nvtx::AttributeBuilder::default()

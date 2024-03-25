@@ -9,10 +9,12 @@ fn main() {
         .compile("nvtx");
 
     let bindings = bindgen::Builder::default()
+        .detect_include_paths(true)
         .clang_arg("-I")
         .clang_arg("vendor/nvtx/c/include")
         .header("c/include/wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .allowlist_recursively(false)
         .generate_cstr(true)
         .default_alias_style(bindgen::AliasVariation::TypeAlias)
         .default_enum_style(bindgen::EnumVariation::Rust { non_exhaustive: false })
