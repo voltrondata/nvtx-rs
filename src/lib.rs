@@ -12,7 +12,7 @@ pub mod nvtx {
         marker::PhantomData,
         sync::atomic::{AtomicU32, Ordering},
     };
-    use widestring::{WideCStr, WideCString};
+    use widestring::WideCString;
 
     trait TypeValueEncodable {
         type Type;
@@ -188,21 +188,28 @@ pub mod nvtx {
 
     /// Handle for retrieving a registered string. See [`Domain::register_string`] and [`Domain::register_strings`]
     #[derive(Debug, Clone, Copy)]
-    pub struct RegisteredString<'a> {
+    pub struct DomainRegisteredString<'str> {
         handle: nvtx_sys::ffi::nvtxStringHandle_t,
-        _lifetime: PhantomData<&'a ()>,
+        domain: &'str Domain,
     }
 
-    /// Represents a category for use with event and range grouping. See See [`Domain::register_category`], [`Domain::register_categories`], and [`Category::new`]
+    /// Represents a category for use with event and range grouping. See [`Domain::register_category`], [`Domain::register_categories`]
     #[derive(Debug, Clone, Copy)]
-    pub struct Category<'cat> {
+    pub struct DomainCategory<'cat> {
         id: u32,
-        _lifetime: PhantomData<&'cat ()>,
+        domain: &'cat Domain,
     }
 
-    impl Category<'static> {
+    
+    /// Represents a category for use with event and range grouping. See [`register_category`], [`register_categories`]
+    #[derive(Debug, Clone, Copy)]
+    pub struct Category {
+        id: u32,
+    }
+
+    impl Category {
         /// Create a new category not affiliated with any domain
-        pub fn new(name: impl Into<Str>) -> Category<'static> {
+        fn new(name: impl Into<Str>) -> Category {
             static COUNT: AtomicU32 = AtomicU32::new(0);
             let id: u32 = 1 + COUNT.fetch_add(1, Ordering::SeqCst);
             match name.into() {
@@ -211,10 +218,7 @@ pub mod nvtx {
                     nvtx_sys::ffi::nvtxNameCategoryW(id, s.as_ptr().cast())
                 },
             }
-            Category {
-                id,
-                _lifetime: PhantomData,
-            }
+            Category { id }
         }
     }
 
@@ -222,7 +226,7 @@ pub mod nvtx {
     #[derive(Debug)]
     pub struct Domain {
         handle: nvtx_sys::ffi::nvtxDomainHandle_t,
-        registered_categories: u32,
+        registered_categories: AtomicU32,
     }
 
     impl Domain {
@@ -235,15 +239,23 @@ pub mod nvtx {
                         nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
                     },
                 },
-                registered_categories: 0,
+                registered_categories: AtomicU32::new(0),
             }
         }
 
-        /// Registers an immutable string with NVTX
-        pub fn register_string<'domain, 'str: 'domain>(
-            &'domain self,
-            string: impl Into<Str>,
-        ) -> RegisteredString<'str> {
+        /// Gets a new builder instance for event attribute construction in the current domain
+        pub fn event_attributes_builder(&self) -> DomainEventAttributesBuilder<'_> {
+            DomainEventAttributesBuilder {
+                domain: self,
+                category: None,
+                color: None,
+                payload: None,
+                message: None,
+            }
+        }
+
+        /// Registers an immutable string within the current domain
+        pub fn register_string(&self, string: impl Into<Str>) -> DomainRegisteredString<'_> {
             let handle = match string.into() {
                 Str::Ascii(s) => unsafe {
                     nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
@@ -252,40 +264,23 @@ pub mod nvtx {
                     nvtx_sys::ffi::nvtxDomainRegisterStringW(self.handle, s.as_ptr().cast())
                 },
             };
-            RegisteredString {
+            DomainRegisteredString {
                 handle,
-                _lifetime: PhantomData,
+                domain: self,
             }
         }
 
-        /// Register many immutable strings with NVTX.
-        pub fn register_strings<'domain, 'str: 'domain, const N: usize>(
-            &'domain self,
+        /// Register many immutable strings within the current domain
+        pub fn register_strings<const N: usize>(
+            &self,
             strings: [impl Into<Str>; N],
-        ) -> [RegisteredString<'str>; N] {
-            strings.map(|string| {
-                let handle = match string.into() {
-                    Str::Ascii(s) => unsafe {
-                        nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
-                    },
-                    Str::Unicode(s) => unsafe {
-                        nvtx_sys::ffi::nvtxDomainRegisterStringW(self.handle, s.as_ptr().cast())
-                    },
-                };
-                RegisteredString {
-                    handle,
-                    _lifetime: PhantomData,
-                }
-            })
+        ) -> [DomainRegisteredString<'_>; N] {
+            strings.map(|string| self.register_string(string))
         }
 
-        /// Register a new category with the domain. Categories are used to group sets of events.
-        pub fn register_category<'domain, 'cat: 'domain>(
-            &'domain mut self,
-            name: impl Into<Str>,
-        ) -> Category<'cat> {
-            self.registered_categories += 1;
-            let id = self.registered_categories;
+        /// Register a new category within the domain. Categories are used to group sets of events.
+        pub fn register_category(&self, name: impl Into<Str>) -> DomainCategory<'_> {
+            let id = 1 + self.registered_categories.fetch_add(1, Ordering::SeqCst);
             match name.into() {
                 Str::Ascii(s) => unsafe {
                     nvtx_sys::ffi::nvtxDomainNameCategoryA(self.handle, id, s.as_ptr())
@@ -294,60 +289,42 @@ pub mod nvtx {
                     nvtx_sys::ffi::nvtxDomainNameCategoryW(self.handle, id, s.as_ptr().cast())
                 },
             }
-            Category {
-                id,
-                _lifetime: PhantomData,
-            }
+            DomainCategory { id, domain: self }
         }
 
-        /// Register new categories with the domain. Categories are used to group sets of events.
-        pub fn register_categories<'domain, 'cat: 'domain, const N: usize>(
-            &'domain mut self,
+        /// Register new categories within the domain. Categories are used to group sets of events.
+        pub fn register_categories<const N: usize>(
+            &self,
             names: [impl Into<Str>; N],
-        ) -> [Category<'cat>; N] {
-            names.map(|name| {
-                self.registered_categories += 1;
-                let id = self.registered_categories;
-                match name.into() {
-                    Str::Ascii(s) => unsafe {
-                        nvtx_sys::ffi::nvtxDomainNameCategoryA(self.handle, id, s.as_ptr())
-                    },
-                    Str::Unicode(s) => unsafe {
-                        nvtx_sys::ffi::nvtxDomainNameCategoryW(self.handle, id, s.as_ptr().cast())
-                    },
-                }
-                Category {
-                    id,
-                    _lifetime: PhantomData,
-                }
-            })
+        ) -> [DomainCategory<'_>; N] {
+            names.map(|name| self.register_category(name))
         }
 
         /// Marks an instantaneous event in the application. A marker can contain a text message or specify additional information using the event attributes structure. These attributes include a text message, color, category, and a payload. Each of the attributes is optional.
-        pub fn mark<'arg, 'domain: 'arg>(&'domain self, arg: impl Into<EventArgument<'arg>>) {
+        pub fn mark<'a>(&'a self, arg: impl Into<DomainEventArgument<'a>>) {
             let attribute = match arg.into() {
-                EventArgument::EventAttribute(attr) => attr,
-                EventArgument::Ascii(s) => EventAttributes::from(s).into(),
-                EventArgument::Unicode(s) => EventAttributes::from(s).into(),
+                DomainEventArgument::EventAttribute(attr) => attr,
+                DomainEventArgument::Ascii(s) => self.event_attributes_builder().message(s).build(),
+                DomainEventArgument::Unicode(s) => self
+                    .event_attributes_builder()
+                    .message(DomainMessage::Unicode(s))
+                    .build(),
             };
             let encoded = attribute.encode();
             unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &encoded) }
         }
 
-        /// Start a new range
-        pub fn range<'rng, 'arg, 'domain: 'rng + 'arg>(
-            &'domain self,
-            arg: impl Into<EventArgument<'arg>>,
-        ) -> Range<'rng> {
-            Range::new(arg, Some(self))
+        /// RAII-friendly domain-owned range type which can (1) be moved across thread boundaries and (2) automatically ended when dropped
+        pub fn range<'a>(&'a self, arg: impl Into<DomainEventArgument<'a>>) -> DomainRange<'a> {
+            DomainRange::new(arg, self)
         }
 
         /// Name a resource
-        pub fn name_resource<'res, 'msg, 'domain: 'msg>(
-            &'domain self,
-            identifier: Identifier,
-            name: impl Into<Message<'msg>>,
-        ) -> Resource<'res> {
+        pub fn name_resource<'a>(
+            &'a self,
+            identifier: DomainIdentifier,
+            name: impl Into<DomainMessage<'a>>,
+        ) -> DomainResource<'a> {
             let materialized_name = name.into();
             let (msg_type, msg_value) = materialized_name.encode();
             let (id_type, id_value) = identifier.encode();
@@ -361,17 +338,14 @@ pub mod nvtx {
             };
             let ptr: *mut nvtx_sys::ffi::nvtxResourceAttributes_v0 = &mut attrs;
             let handle = unsafe { nvtx_sys::ffi::nvtxDomainResourceCreate(self.handle, ptr) };
-            Resource {
+            DomainResource {
                 handle,
                 _lifetime: PhantomData,
             }
         }
 
         /// Create a user defined synchronization object This is used to track non-OS synchronization working with spinlocks and atomics.
-        pub fn user_sync<'msg, 'user_sync, 'domain: 'msg + 'user_sync>(
-            &'domain self,
-            name: impl Into<Message<'msg>>,
-        ) -> sync::UserSync<'user_sync> {
+        pub fn user_sync<'a>(&'a self, name: impl Into<DomainMessage<'a>>) -> sync::UserSync<'a> {
             let message = name.into();
             let (msg_type, msg_value) = message.encode();
             let attrs = nvtx_sys::ffi::nvtxSyncUserAttributes_t {
@@ -429,36 +403,24 @@ pub mod nvtx {
         }
     }
 
-    impl From<&WideCStr> for Str {
-        fn from(v: &WideCStr) -> Self {
-            Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
-        }
-    }
-
-    impl From<WideCString> for Str {
-        fn from(v: WideCString) -> Self {
-            Self::Unicode(v)
-        }
-    }
-
     /// Represents a message for use within events and ranges
     #[derive(Debug, Clone)]
-    pub enum Message<'a> {
+    pub enum DomainMessage<'a> {
         /// discriminant for an owned ASCII string
         Ascii(CString),
         /// discriminant for an owned Unicode string
         Unicode(WideCString),
         /// discriminant for a registered string belonging to a domain
-        Registered(&'a RegisteredString<'a>),
+        Registered(&'a DomainRegisteredString<'a>),
     }
 
-    impl<'a> From<&'a RegisteredString<'a>> for Message<'a> {
-        fn from(v: &'a RegisteredString) -> Self {
+    impl<'a> From<&'a DomainRegisteredString<'a>> for DomainMessage<'a> {
+        fn from(v: &'a DomainRegisteredString) -> Self {
             Self::Registered(v)
         }
     }
 
-    impl From<String> for Message<'_> {
+    impl From<String> for DomainMessage<'_> {
         fn from(v: String) -> Self {
             Self::Unicode(
                 WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
@@ -466,53 +428,41 @@ pub mod nvtx {
         }
     }
 
-    impl From<&str> for Message<'_> {
+    impl From<&str> for DomainMessage<'_> {
         fn from(v: &str) -> Self {
             Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
         }
     }
 
-    impl From<CString> for Message<'_> {
+    impl From<CString> for DomainMessage<'_> {
         fn from(v: CString) -> Self {
             Self::Ascii(v)
         }
     }
 
-    impl From<&CStr> for Message<'_> {
+    impl From<&CStr> for DomainMessage<'_> {
         fn from(v: &CStr) -> Self {
             Self::Ascii(CString::from(v))
         }
     }
 
-    impl From<&WideCStr> for Message<'_> {
-        fn from(v: &WideCStr) -> Self {
-            Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
-        }
-    }
-
-    impl From<WideCString> for Message<'_> {
-        fn from(v: WideCString) -> Self {
-            Self::Unicode(v)
-        }
-    }
-
-    impl<'a> TypeValueEncodable for Message<'a> {
+    impl<'a> TypeValueEncodable for DomainMessage<'a> {
         type Type = nvtx_sys::ffi::nvtxMessageType_t;
         type Value = nvtx_sys::ffi::nvtxMessageValue_t;
 
         fn encode(&self) -> (Self::Type, Self::Value) {
             match &self {
-                Message::Ascii(s) => (
+                DomainMessage::Ascii(s) => (
                     nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_TYPE_ASCII,
                     Self::Value { ascii: s.as_ptr() },
                 ),
-                Message::Unicode(s) => (
+                DomainMessage::Unicode(s) => (
                     nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_TYPE_UNICODE,
                     Self::Value {
                         unicode: s.as_ptr().cast(),
                     },
                 ),
-                Message::Registered(r) => (
+                DomainMessage::Registered(r) => (
                     nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_TYPE_REGISTERED,
                     Self::Value {
                         registered: r.handle,
@@ -531,16 +481,80 @@ pub mod nvtx {
         }
     }
 
-    /// All attributes that are associated with marks and ranges
+    /// Represents a message for use within events and ranges
     #[derive(Debug, Clone)]
-    pub struct EventAttributes<'a> {
-        category: Option<Category<'a>>,
-        color: Option<Color>,
-        payload: Option<Payload>,
-        message: Option<Message<'a>>,
+    pub enum Message {
+        /// discriminant for an owned ASCII string
+        Ascii(CString),
+        /// discriminant for an owned Unicode string
+        Unicode(WideCString),
     }
 
-    impl<'a> EventAttributes<'a> {
+    impl From<String> for Message {
+        fn from(v: String) -> Self {
+            Self::Unicode(
+                WideCString::from_str(v.as_str()).expect("Could not convert to wide string"),
+            )
+        }
+    }
+
+    impl From<&str> for Message {
+        fn from(v: &str) -> Self {
+            Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
+        }
+    }
+
+    impl From<CString> for Message {
+        fn from(v: CString) -> Self {
+            Self::Ascii(v)
+        }
+    }
+
+    impl From<&CStr> for Message {
+        fn from(v: &CStr) -> Self {
+            Self::Ascii(CString::from(v))
+        }
+    }
+
+    impl<'a> TypeValueEncodable for Message {
+        type Type = nvtx_sys::ffi::nvtxMessageType_t;
+        type Value = nvtx_sys::ffi::nvtxMessageValue_t;
+
+        fn encode(&self) -> (Self::Type, Self::Value) {
+            match &self {
+                Message::Ascii(s) => (
+                    nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_TYPE_ASCII,
+                    Self::Value { ascii: s.as_ptr() },
+                ),
+                Message::Unicode(s) => (
+                    nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_TYPE_UNICODE,
+                    Self::Value {
+                        unicode: s.as_ptr().cast(),
+                    },
+                ),
+            }
+        }
+
+        fn default_encoding() -> (Self::Type, Self::Value) {
+            (
+                nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_UNKNOWN,
+                Self::Value {
+                    ascii: std::ptr::null(),
+                },
+            )
+        }
+    }
+
+    /// All attributes that are associated with marks and ranges
+    #[derive(Debug, Clone)]
+    pub struct EventAttributes {
+        category: Option<Category>,
+        color: Option<Color>,
+        payload: Option<Payload>,
+        message: Option<Message>,
+    }
+
+    impl<'a> EventAttributes {
         fn encode(&self) -> nvtx_sys::ffi::nvtxEventAttributes_t {
             let (color_type, color_value) = self
                 .color
@@ -575,37 +589,63 @@ pub mod nvtx {
         }
     }
 
-    impl From<CString> for EventAttributes<'_> {
-        fn from(s: CString) -> Self {
-            AttributeBuilder::default().message(s).build()
-        }
+    /// All attributes that are associated with marks and ranges
+    #[derive(Debug, Clone)]
+    pub struct DomainEventAttributes<'a> {
+        category: Option<DomainCategory<'a>>,
+        color: Option<Color>,
+        payload: Option<Payload>,
+        message: Option<DomainMessage<'a>>,
     }
 
-    impl From<WideCString> for EventAttributes<'_> {
-        fn from(s: WideCString) -> Self {
-            AttributeBuilder::default().message(s).build()
-        }
-    }
-
-    impl<'attr, 'msg: 'attr> From<Message<'msg>> for EventAttributes<'attr> {
-        fn from(m: Message<'msg>) -> Self {
-            AttributeBuilder::default().message(m).build()
+    impl<'a> DomainEventAttributes<'a> {
+        fn encode(&self) -> nvtx_sys::ffi::nvtxEventAttributes_t {
+            let (color_type, color_value) = self
+                .color
+                .as_ref()
+                .map(Color::encode)
+                .unwrap_or_else(Color::default_encoding);
+            let (payload_type, payload_value) = self
+                .payload
+                .as_ref()
+                .map(Payload::encode)
+                .unwrap_or_else(Payload::default_encoding);
+            let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
+            let emit = |(t, v)| nvtx_sys::ffi::nvtxEventAttributes_t {
+                version: nvtx_sys::ffi::NVTX_VERSION as u16,
+                size: 48,
+                category: cat,
+                colorType: color_type as i32,
+                color: color_value,
+                payloadType: payload_type as i32,
+                reserved0: 0,
+                payload: payload_value,
+                messageType: t as i32,
+                message: v,
+            };
+            // this is separated as a callable since we need encode() to outlive the call to emit
+            emit(
+                self.message
+                    .as_ref()
+                    .map(DomainMessage::encode)
+                    .unwrap_or_else(Message::default_encoding),
+            )
         }
     }
 
     /// Convenience wrapper for all valid argument types
     #[derive(Debug, Clone)]
-    pub enum EventArgument<'a> {
+    pub enum EventArgument {
         /// discriminant for an owned ASCII string
         Ascii(CString),
         /// discriminant for an owned Unicode string
         Unicode(WideCString),
         /// discriminant for a detailed Attribute
-        EventAttribute(EventAttributes<'a>),
+        EventAttribute(EventAttributes),
     }
 
-    impl<'arg, 'attr: 'arg> From<EventAttributes<'attr>> for EventArgument<'arg> {
-        fn from(value: EventAttributes<'attr>) -> Self {
+    impl<'a> From<EventAttributes> for EventArgument {
+        fn from(value: EventAttributes) -> Self {
             match value {
                 EventAttributes {
                     category: None,
@@ -624,78 +664,109 @@ pub mod nvtx {
         }
     }
 
-    impl From<&str> for EventArgument<'_> {
+    impl From<&str> for EventArgument {
         fn from(v: &str) -> Self {
             Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
         }
     }
 
-    impl From<CString> for EventArgument<'_> {
+    impl From<CString> for EventArgument {
         fn from(v: CString) -> Self {
             Self::Ascii(v)
         }
     }
 
-    impl From<&CStr> for EventArgument<'_> {
+    impl From<&CStr> for EventArgument {
         fn from(v: &CStr) -> Self {
             Self::Ascii(CString::from(v))
         }
     }
 
-    impl From<&WideCStr> for EventArgument<'_> {
-        fn from(v: &WideCStr) -> Self {
-            Self::Unicode(WideCString::from_ustr(v).expect("Could not convert to wide string"))
+    /// Convenience wrapper for all valid argument types
+    #[derive(Debug, Clone)]
+    pub enum DomainEventArgument<'a> {
+        /// discriminant for an owned ASCII string
+        Ascii(CString),
+        /// discriminant for an owned Unicode string
+        Unicode(WideCString),
+        /// discriminant for a detailed Attribute
+        EventAttribute(DomainEventAttributes<'a>),
+    }
+
+    impl<'a> From<DomainEventAttributes<'a>> for DomainEventArgument<'a> {
+        fn from(value: DomainEventAttributes<'a>) -> Self {
+            match value {
+                DomainEventAttributes {
+                    category: None,
+                    color: None,
+                    payload: None,
+                    message: Some(DomainMessage::Ascii(s)),
+                } => DomainEventArgument::Ascii(s),
+                DomainEventAttributes {
+                    category: None,
+                    color: None,
+                    payload: None,
+                    message: Some(DomainMessage::Unicode(s)),
+                } => DomainEventArgument::Unicode(s),
+                attr => DomainEventArgument::EventAttribute(attr.into()),
+            }
         }
     }
 
-    impl From<WideCString> for EventArgument<'_> {
-        fn from(v: WideCString) -> Self {
-            Self::Unicode(v)
+    impl From<&str> for DomainEventArgument<'_> {
+        fn from(v: &str) -> Self {
+            Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
         }
     }
 
-    /// Builder to facilitate easier construction of [`Attribute`]
-    #[derive(Debug, Clone, Default)]
-    pub struct AttributeBuilder<'a> {
-        category: Option<&'a Category<'a>>,
+    impl From<CString> for DomainEventArgument<'_> {
+        fn from(v: CString) -> Self {
+            Self::Ascii(v)
+        }
+    }
+
+    impl From<&CStr> for DomainEventArgument<'_> {
+        fn from(v: &CStr) -> Self {
+            Self::Ascii(CString::from(v))
+        }
+    }
+
+    /// Builder to facilitate easier construction of [`EventAttributes`]
+    #[derive(Debug, Clone)]
+    pub struct EventAttributesBuilder<'a> {
+        category: Option<&'a Category>,
         color: Option<Color>,
         payload: Option<Payload>,
-        message: Option<Message<'a>>,
+        message: Option<Message>,
     }
 
-    impl<'attr> AttributeBuilder<'attr> {
+    impl<'a> EventAttributesBuilder<'a> {
         /// update the attribute's category
-        pub fn category<'cat: 'attr>(
-            mut self,
-            category: &'cat Category<'cat>,
-        ) -> AttributeBuilder<'attr> {
+        pub fn category(mut self, category: &'a Category) -> EventAttributesBuilder<'a> {
             self.category = Some(category);
             self
         }
 
         /// update the attribute's color
-        pub fn color(mut self, color: impl Into<Color>) -> AttributeBuilder<'attr> {
+        pub fn color(mut self, color: impl Into<Color>) -> EventAttributesBuilder<'a> {
             self.color = Some(color.into());
             self
         }
 
         /// update the attribute's payload
-        pub fn payload(mut self, payload: impl Into<Payload>) -> AttributeBuilder<'attr> {
+        pub fn payload(mut self, payload: impl Into<Payload>) -> EventAttributesBuilder<'a> {
             self.payload = Some(payload.into());
             self
         }
 
         /// update the attribute's message
-        pub fn message<'msg: 'attr>(
-            mut self,
-            message: impl Into<Message<'msg>>,
-        ) -> AttributeBuilder<'attr> {
+        pub fn message(mut self, message: impl Into<Message>) -> EventAttributesBuilder<'a> {
             self.message = Some(message.into());
             self
         }
 
         /// build the attribute from the builder's state
-        pub fn build(self) -> EventAttributes<'attr> {
+        pub fn build(self) -> EventAttributes {
             EventAttributes {
                 category: self.category.copied(),
                 color: self.color,
@@ -705,53 +776,133 @@ pub mod nvtx {
         }
     }
 
-    /// A RAII-like object for modeling start/end ranges
-    #[derive(Debug)]
-    pub struct Range<'a> {
-        id: nvtx_sys::ffi::nvtxRangeId_t,
-        domain: Option<&'a Domain>,
+    /// Builder to facilitate easier construction of [`DomainEventAttributes`]
+    #[derive(Debug, Clone)]
+    pub struct DomainEventAttributesBuilder<'a> {
+        domain: &'a Domain,
+        category: Option<&'a DomainCategory<'a>>,
+        color: Option<Color>,
+        payload: Option<Payload>,
+        message: Option<DomainMessage<'a>>,
     }
 
-    impl<'rng> Range<'rng> {
-        fn new<'arg, 'domain: 'rng + 'arg>(
-            arg: impl Into<EventArgument<'arg>>,
-            domain: Option<&'domain Domain>,
-        ) -> Range<'rng> {
-            let argument = arg.into();
-            if let Some(d) = domain {
-                let arg = match argument {
-                    EventArgument::EventAttribute(a) => a,
-                    EventArgument::Ascii(s) => AttributeBuilder::default().message(s).build(),
-                    EventArgument::Unicode(s) => AttributeBuilder::default().message(s).build(),
-                };
-                let id = unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(d.handle, &arg.encode()) };
-                Range {
-                    id,
-                    domain: Some(d),
-                }
-            } else {
-                let id = match &argument {
-                    EventArgument::Ascii(s) => unsafe {
-                        nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr())
-                    },
-                    EventArgument::Unicode(s) => unsafe {
-                        nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast())
-                    },
-                    EventArgument::EventAttribute(a) => unsafe {
-                        nvtx_sys::ffi::nvtxRangeStartEx(&a.encode())
-                    },
-                };
-                Range { id, domain: None }
+    impl<'a> DomainEventAttributesBuilder<'a> {
+        /// Update the attribute's category. An assertion will be thrown if a DomainCategory is passed in whose domain is not the same as this builder
+        pub fn category(
+            mut self,
+            category: &'a DomainCategory<'a>,
+        ) -> DomainEventAttributesBuilder<'a> {
+            assert!(
+                std::ptr::eq(category.domain, self.domain),
+                "Builder's Domain differs from Category's Domain"
+            );
+            self.category = Some(category);
+            self
+        }
+
+        /// update the attribute's color
+        pub fn color(mut self, color: impl Into<Color>) -> DomainEventAttributesBuilder<'a> {
+            self.color = Some(color.into());
+            self
+        }
+
+        /// update the attribute's payload
+        pub fn payload(mut self, payload: impl Into<Payload>) -> DomainEventAttributesBuilder<'a> {
+            self.payload = Some(payload.into());
+            self
+        }
+
+        /// Update the attribute's message. An assertion will be thrown if a DomainRegisteredString is passed in whose domain is not the same as this builder
+        pub fn message(
+            mut self,
+            message: impl Into<DomainMessage<'a>>,
+        ) -> DomainEventAttributesBuilder<'a> {
+            let msg: DomainMessage = message.into();
+            if let DomainMessage::Registered(r) = &msg {
+                assert!(
+                    std::ptr::eq(r.domain, self.domain),
+                    "Builder's Domain differs from DomainRegisteredString's Domain"
+                )
+            }
+            self.message = Some(msg);
+            self
+        }
+
+        /// build the attribute from the builder's state
+        pub fn build(self) -> DomainEventAttributes<'a> {
+            DomainEventAttributes {
+                category: self.category.copied(),
+                color: self.color,
+                payload: self.payload,
+                message: self.message,
             }
         }
     }
 
-    impl<'rng> Drop for Range<'rng> {
+    /// A RAII-like object for modeling start/end Ranges
+    #[derive(Debug)]
+    pub struct Range {
+        id: nvtx_sys::ffi::nvtxRangeId_t,
+    }
+
+    impl Range {
+        fn new(arg: impl Into<EventArgument>) -> Range {
+            let argument = arg.into();
+            let id = match &argument {
+                EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
+                EventArgument::Unicode(s) => unsafe {
+                    nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast())
+                },
+                EventArgument::EventAttribute(a) => unsafe {
+                    nvtx_sys::ffi::nvtxRangeStartEx(&a.encode())
+                },
+            };
+            Range { id }
+        }
+    }
+
+    impl<'a> Drop for Range {
         fn drop(&mut self) {
-            match self.domain {
-                Some(d) => unsafe { nvtx_sys::ffi::nvtxDomainRangeEnd(d.handle, self.id) },
-                None => unsafe { nvtx_sys::ffi::nvtxRangeEnd(self.id) },
-            }
+            unsafe { nvtx_sys::ffi::nvtxRangeEnd(self.id) }
+        }
+    }
+
+    /// A RAII-like object for modeling start/end Ranges within a Domain
+    #[derive(Debug)]
+    pub struct DomainRange<'a> {
+        id: nvtx_sys::ffi::nvtxRangeId_t,
+        domain: &'a Domain,
+    }
+
+    impl<'a> DomainRange<'a> {
+        fn new<'arg, 'domain: 'a + 'arg>(
+            arg: impl Into<DomainEventArgument<'arg>>,
+            domain: &'domain Domain,
+        ) -> DomainRange<'a> {
+            let argument = arg.into();
+            let arg = match argument {
+                DomainEventArgument::EventAttribute(attr) => attr,
+                DomainEventArgument::Ascii(s) => DomainEventAttributes {
+                    category: None,
+                    color: None,
+                    payload: None,
+                    message: Some(DomainMessage::Ascii(s)),
+                },
+                DomainEventArgument::Unicode(s) => DomainEventAttributes {
+                    category: None,
+                    color: None,
+                    payload: None,
+                    message: Some(DomainMessage::Unicode(s)),
+                },
+            };
+            let id = unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(domain.handle, &arg.encode()) };
+            DomainRange { id, domain }
+        }
+    }
+
+    impl<'a> Drop for DomainRange<'a> {
+        fn drop(&mut self) {
+            unsafe { nvtx_sys::ffi::nvtxDomainRangeEnd(self.domain.handle, self.id) }
         }
     }
 
@@ -767,6 +918,7 @@ pub mod nvtx {
 
         impl<'a> UserSync<'a> {
             /// Signal to tools that an attempt to acquire a user defined synchronization object.
+            #[must_use = "Dropping the return will violate the state machine"]
             pub fn acquire(self) -> UserSyncAcquireStart<'a> {
                 unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireStart(self.handle) }
                 UserSyncAcquireStart { sync_object: self }
@@ -779,19 +931,21 @@ pub mod nvtx {
             }
         }
 
-        /// state modeling that the start of acquiring the synchronization object
+        /// State modeling the start of acquiring the synchronization object.
         pub struct UserSyncAcquireStart<'a> {
             sync_object: UserSync<'a>,
         }
 
         impl<'a> UserSyncAcquireStart<'a> {
-            /// Signal to tools of failure in acquiring a user defined synchronization object This should be called after [`Self::acquire_start`].
+            /// Signal to tools of failure in acquiring a user defined synchronization object.
+            #[must_use = "Dropping the return will result in the Synchronization Object being destroyed"]
             pub fn failed(self) -> UserSync<'a> {
                 unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireFailed(self.sync_object.handle) }
                 self.sync_object
             }
 
-            /// Signal to tools of success in acquiring a user defined synchronization object This should be called after [`Self::acquire_start`].
+            /// Signal to tools of success in acquiring a user defined synchronization object.
+            #[must_use = "Dropping the return will violate the state machine"]
             pub fn success(self) -> UserSyncSuccess<'a> {
                 unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireSuccess(self.sync_object.handle) }
                 UserSyncSuccess {
@@ -800,13 +954,14 @@ pub mod nvtx {
             }
         }
 
-        /// State modeling that the success of acquiring the synchronization object
+        /// State modeling the success of acquiring the synchronization object.
         pub struct UserSyncSuccess<'a> {
             sync_object: UserSync<'a>,
         }
 
         impl<'a> UserSyncSuccess<'a> {
-            /// Signal to tools of releasing a reservation on user defined synchronization object. Returns the original UserSync object.
+            /// Signal to tools of releasing a reservation on user defined synchronization object.
+            #[must_use = "Dropping the return will result in the Synchronization Object being destroyed"]
             pub fn releasing(self) -> UserSync<'a> {
                 unsafe { nvtx_sys::ffi::nvtxDomainSyncUserReleasing(self.sync_object.handle) }
                 self.sync_object
@@ -814,8 +969,8 @@ pub mod nvtx {
         }
     }
 
-    /// Identifier used for Resource
-    pub enum Identifier {
+    /// DomainIdentifier used for DomainResource
+    pub enum DomainIdentifier {
         /// generic pointer
         Pointer(*const ::std::os::raw::c_void),
         /// generic handle
@@ -826,16 +981,16 @@ pub mod nvtx {
         PosixThread(u64),
     }
 
-    impl TypeValueEncodable for Identifier {
+    impl TypeValueEncodable for DomainIdentifier {
         type Type = u32;
         type Value = nvtx_sys::ffi::nvtxResourceAttributes_v0_identifier_t;
 
         fn encode(&self) -> (Self::Type, Self::Value) {
             match self {
-                Identifier::Pointer(p) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_POINTER as u32, Self::Value{pValue: p.clone()}),
-                Identifier::Handle(h) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32, Self::Value{ullValue: h.clone()}),
-                Identifier::NativeThread(t) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE as u32, Self::Value{ullValue: t.clone()}),
-                Identifier::PosixThread(t) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX as u32, Self::Value{ullValue: t.clone()}),
+                DomainIdentifier::Pointer(p) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_POINTER as u32, Self::Value{pValue: p.clone()}),
+                DomainIdentifier::Handle(h) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32, Self::Value{ullValue: h.clone()}),
+                DomainIdentifier::NativeThread(t) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE as u32, Self::Value{ullValue: t.clone()}),
+                DomainIdentifier::PosixThread(t) => (nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX as u32, Self::Value{ullValue: t.clone()}),
             }
         }
 
@@ -848,19 +1003,29 @@ pub mod nvtx {
     }
 
     /// Named resource handle
-    pub struct Resource<'a> {
+    pub struct DomainResource<'a> {
         handle: nvtx_sys::ffi::nvtxResourceHandle_t,
         _lifetime: PhantomData<&'a ()>,
     }
 
-    impl<'a> Drop for Resource<'a> {
+    impl<'a> Drop for DomainResource<'a> {
         fn drop(&mut self) {
             unsafe { nvtx_sys::ffi::nvtxDomainResourceDestroy(self.handle) }
         }
     }
 
-    /// yield a mark to be emitted
-    pub fn mark<'arg>(argument: impl Into<EventArgument<'arg>>) {
+    /// Gets a new builder instance for event attribute construction in the default (global) scope
+    pub fn event_attributes_builder<'a>() -> EventAttributesBuilder<'a> {
+        EventAttributesBuilder {
+            category: None,
+            color: None,
+            payload: None,
+            message: None,
+        }
+    }
+
+    /// Marks an instantaneous event in the application. A marker can contain a text message or specify additional information using the event attributes structure. These attributes include a text message, color, category, and a payload. Each of the attributes is optional.
+    pub fn mark(argument: impl Into<EventArgument>) {
         match argument.into() {
             EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
             EventArgument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
@@ -878,10 +1043,18 @@ pub mod nvtx {
         }
     }
 
-    /// Start a new range which can be moved across thread boundaries
-    ///
-    /// returns a RAII-friendly type which is automatically ended when dropped
-    pub fn range<'arg, 'rng>(arg: impl Into<EventArgument<'arg>>) -> Range<'rng> {
-        Range::new(arg, None)
+    /// RAII-friendly range type which can (1) be moved across thread boundaries and (2) automatically ended when dropped
+    pub fn range(arg: impl Into<EventArgument>) -> Range {
+        Range::new(arg)
+    }
+
+    /// Register a new category within the default (global) scope. Categories are used to group sets of events.
+    pub fn register_category(name: impl Into<Str>) -> Category {
+        Category::new(name)
+    }
+
+    /// Register many categories within the default (global) scope. Categories are used to group sets of events.
+    pub fn register_categories<const C: usize>(names: [impl Into<Str>; C]) -> [Category; C] {
+        names.map(register_category)
     }
 }
