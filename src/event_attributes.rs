@@ -44,7 +44,6 @@ impl EventAttributes {
     }
 }
 
-
 /// Builder to facilitate easier construction of [`EventAttributes`]
 #[derive(Debug, Clone, Default)]
 pub struct EventAttributesBuilder<'a> {

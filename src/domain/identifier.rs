@@ -24,23 +24,17 @@ impl TypeValueEncodable for Identifier {
             ),
             Identifier::Handle(h) => (
                 nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32,
-                Self::Value {
-                    ullValue: *h,
-                },
+                Self::Value { ullValue: *h },
             ),
             Identifier::NativeThread(t) => (
                 nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE
                     as u32,
-                Self::Value {
-                    ullValue: *t,
-                },
+                Self::Value { ullValue: *t },
             ),
             Identifier::PosixThread(t) => (
                 nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX
                     as u32,
-                Self::Value {
-                    ullValue: *t,
-                },
+                Self::Value { ullValue: *t },
             ),
         }
     }

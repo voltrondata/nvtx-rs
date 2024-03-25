@@ -1,4 +1,6 @@
-use super::{Domain,event_argument::EventArgument, event_attributes::EventAttributes, message::Message};
+use super::{
+    event_argument::EventArgument, event_attributes::EventAttributes, message::Message, Domain,
+};
 
 /// A RAII-like object for modeling start/end Ranges within a Domain
 #[derive(Debug)]
