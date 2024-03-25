@@ -107,8 +107,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ${{ env.CARGO_CACHE_PATH }}
-          key: ${{ runner.os }}-cargo-check-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-check-${{ steps.toolchain.outputs.cachekey }}-
+          key: ${{ runner.os }}-cargo-check-${{ steps.toolchain.outputs.cachekey }}-${{ matrix.features }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-check-${{ steps.toolchain.outputs.cachekey }}-${{ matrix.features }}-
       - name: Check
         run: cargo check --workspace --all-targets ${{ matrix.features }}
       - name: Test
