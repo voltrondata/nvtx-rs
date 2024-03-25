@@ -13,7 +13,7 @@ publish = false
 license = "Proprietary"
 
 [package]
-name = "nvtx-rs"
+name = "nvtx"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

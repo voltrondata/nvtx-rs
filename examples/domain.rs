@@ -1,9 +1,7 @@
 use std::{thread, time};
 
-use nvtx_rs::nvtx;
-
 fn main() {
-    let domain = nvtx::Domain::new("Domain");
+    let domain = nvtx::domain("Domain");
     let [alpha, beta, gamma] = domain.register_strings(["alpha", "beta", "gamma"]);
     let [a, b] = domain.register_categories(["A", "B"]);
 
@@ -13,7 +11,7 @@ fn main() {
         domain
             .event_attributes_builder()
             .category(&a)
-            .color(nvtx::colors::olive)
+            .color(nvtx::color::olive)
             .message(&alpha)
             .build(),
     );
@@ -36,7 +34,7 @@ fn main() {
         domain
             .event_attributes_builder()
             .category(&a)
-            .color(nvtx::colors::olive)
+            .color(nvtx::color::olive)
             .message(&beta)
             .build(),
     );
@@ -45,7 +43,7 @@ fn main() {
         domain
             .event_attributes_builder()
             .category(&a)
-            .color(nvtx::colors::olive)
+            .color(nvtx::color::olive)
             .message(&gamma)
             .build(),
     );
@@ -55,13 +53,13 @@ fn main() {
     drop(r2);
     thread::sleep(time::Duration::from_millis(10));
     drop(r3);
-    let d2 = nvtx::Domain::new("cool");
+    let d2 = nvtx::domain("cool");
 
     let p1 = d2.range(
         domain
             .event_attributes_builder()
             .category(&b)
-            .color(nvtx::colors::orangered)
+            .color(nvtx::color::orangered)
             .message(&alpha)
             .build(),
     );
@@ -70,7 +68,7 @@ fn main() {
         domain
             .event_attributes_builder()
             .category(&b)
-            .color(nvtx::colors::orangered)
+            .color(nvtx::color::orangered)
             .message(&beta)
             .build(),
     );
@@ -79,7 +77,7 @@ fn main() {
         domain
             .event_attributes_builder()
             .category(&b)
-            .color(nvtx::colors::orangered)
+            .color(nvtx::color::orangered)
             .message(&gamma)
             .build(),
     );
