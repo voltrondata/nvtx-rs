@@ -3,6 +3,7 @@ pub use self::{
     event_argument::EventArgument,
     event_attributes::{EventAttributes, EventAttributesBuilder},
     identifier::Identifier,
+    local_range::LocalRange,
     message::Message,
     range::Range,
     registered_string::RegisteredString,
@@ -19,6 +20,7 @@ mod category;
 mod event_argument;
 mod event_attributes;
 mod identifier;
+mod local_range;
 mod message;
 mod range;
 mod registered_string;
@@ -114,7 +116,12 @@ impl Domain {
         unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &encoded) }
     }
 
-    /// Create an RAII-friendly, domain-owned range type which can (1) be moved across thread boundaries and (2) automatically ended when dropped
+    /// Create an RAII-friendly, domain-owned range type which (1) cannot be moved across thread boundaries and (2) automatically ended when dropped. Panics on drop() if the opening level doesn't match the closing level (since it must model a perfect stack).
+    pub fn local_range<'a>(&'a self, arg: impl Into<EventArgument<'a>>) -> LocalRange<'a> {
+        LocalRange::new(arg, self)
+    }
+
+    /// Create an RAII-friendly, domain-owned range type which (1) can be moved across thread boundaries and (2) automatically ended when dropped
     pub fn range<'a>(&'a self, arg: impl Into<EventArgument<'a>>) -> Range<'a> {
         Range::new(arg, self)
     }
@@ -167,3 +174,7 @@ impl Drop for Domain {
         unsafe { nvtx_sys::ffi::nvtxDomainDestroy(self.handle) }
     }
 }
+
+unsafe impl Send for Domain {}
+
+unsafe impl Sync for Domain {}

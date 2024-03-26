@@ -10,10 +10,7 @@ pub struct Range<'a> {
 }
 
 impl<'a> Range<'a> {
-    pub(super) fn new<'domain: 'a>(
-        arg: impl Into<EventArgument<'domain>>,
-        domain: &'domain Domain,
-    ) -> Range<'a> {
+    pub(super) fn new(arg: impl Into<EventArgument<'a>>, domain: &'a Domain) -> Range<'a> {
         let argument = arg.into();
         let arg = match argument {
             EventArgument::EventAttribute(attr) => attr,
@@ -40,3 +37,7 @@ impl<'a> Drop for Range<'a> {
         unsafe { nvtx_sys::ffi::nvtxDomainRangeEnd(self.domain.handle, self.id) }
     }
 }
+
+unsafe impl<'a> Send for Range<'a> {}
+
+unsafe impl<'a> Sync for Range<'a> {}
