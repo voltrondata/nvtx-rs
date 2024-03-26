@@ -47,13 +47,23 @@ pub fn mark(argument: impl Into<EventArgument>) {
     }
 }
 
-/// Allows the user to name an active thread of the current process. If an invalid thread ID is provided or a thread ID from a different process is used the behavior of the tool is implementation dependent.
-pub fn name_thread(thread_id: u32, name: impl Into<Str>) {
+/// Name an active thread of the current process. If an invalid thread ID is provided or a thread ID from a different process is used the behavior of the tool is implementation dependent.
+pub fn name_thread(native_tid: u32, name: impl Into<Str>) {
     match name.into() {
-        Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadA(thread_id, s.as_ptr()) },
+        Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadA(native_tid, s.as_ptr()) },
         Str::Unicode(s) => unsafe {
-            nvtx_sys::ffi::nvtxNameOsThreadA(thread_id, s.as_ptr().cast())
+            nvtx_sys::ffi::nvtxNameOsThreadW(native_tid, s.as_ptr().cast())
         },
+    }
+}
+
+#[cfg(feature = "name-current-thread")]
+/// Name the current thread of the current process
+pub fn name_current_thread(name: impl Into<Str>) {
+    let tid = gettid::gettid() as u32;
+    match name.into() {
+        Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadA(tid, s.as_ptr()) },
+        Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadW(tid, s.as_ptr().cast()) },
     }
 }
 

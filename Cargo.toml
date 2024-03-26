@@ -25,11 +25,13 @@ publish.workspace = true
 license.workspace = true
 
 [features]
-default = ["color-name"]
+default = ["color-name", "name-current-thread"]
 color-name = ["dep:color-name"]
+name-current-thread = ["dep:gettid"]
 
 [dependencies]
 color-name = { version = "1.1.0", optional = true }
+gettid = { version = "0.1.2", optional = true }
 nvtx-sys = { path = "crates/nvtx-sys" }
 widestring = "1.0.2"
 
@@ -44,3 +46,11 @@ required-features = ["color-name"]
 [[example]]
 name = "range_start_end"
 required-features = ["color-name"]
+
+[[example]]
+name = "threads"
+required-features = ["name-current-thread"]
+
+[[example]]
+name = "domain_threads"
+required-features = ["name-current-thread"]
