@@ -167,3 +167,7 @@ impl Drop for Domain {
         unsafe { nvtx_sys::ffi::nvtxDomainDestroy(self.handle) }
     }
 }
+
+unsafe impl Send for Domain {}
+
+unsafe impl Sync for Domain {}

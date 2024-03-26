@@ -15,7 +15,7 @@ pub fn gettid() -> u32 {
 fn main() {
     nvtx::name_thread(gettid(), CString::new("Main Thread").unwrap());
     let r = nvtx::Range::new("Start on main thread");
-    let t1 = thread::spawn(|| {
+    let t1 = thread::spawn(move || {
         nvtx::name_thread(gettid(), CString::new("Fork 1").unwrap());
         sleep(Duration::from_millis(10));
         drop(r);
