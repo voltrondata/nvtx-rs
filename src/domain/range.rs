@@ -40,3 +40,7 @@ impl<'a> Drop for Range<'a> {
         unsafe { nvtx_sys::ffi::nvtxDomainRangeEnd(self.domain.handle, self.id) }
     }
 }
+
+unsafe impl<'a> Send for Range<'a> {}
+
+unsafe impl<'a> Sync for Range<'a> {}

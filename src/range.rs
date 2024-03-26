@@ -28,3 +28,7 @@ impl Drop for Range {
         unsafe { nvtx_sys::ffi::nvtxRangeEnd(self.id) }
     }
 }
+
+unsafe impl Send for Range {}
+
+unsafe impl Sync for Range {}
