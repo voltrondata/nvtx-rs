@@ -10,9 +10,9 @@ pub struct Range<'a> {
 }
 
 impl<'a> Range<'a> {
-    pub(super) fn new<'domain: 'a>(
-        arg: impl Into<EventArgument<'domain>>,
-        domain: &'domain Domain,
+    pub(super) fn new(
+        arg: impl Into<EventArgument<'a>>,
+        domain: &'a Domain,
     ) -> Range<'a> {
         let argument = arg.into();
         let arg = match argument {

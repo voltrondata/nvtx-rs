@@ -22,7 +22,7 @@ fn main() {
         let t1 = s.spawn(move || {
             nvtx::name_thread(gettid(), CString::new("Fork 1").unwrap());
             sleep(Duration::from_millis(10));
-            drop(r);
+            drop(r)
         });
         let t2 = s.spawn(move || {
             nvtx::name_thread(gettid(), CString::new("Fork 2").unwrap());
@@ -33,11 +33,10 @@ fn main() {
         let t3 = s.spawn(move || {
             nvtx::name_thread(gettid(), CString::new("Fork 3").unwrap());
             let _r = d.range("Start and end on Fork 3");
-            sleep(Duration::from_millis(30));
+            sleep(Duration::from_millis(30))
         });
 
-        let r1 = t2.join().unwrap();
-        drop(r1);
+        t2.join().expect("Failed to join");
         t1.join().expect("Failed to join");
         t3.join().expect("Failed to join");
     });
