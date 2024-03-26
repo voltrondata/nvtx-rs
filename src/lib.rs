@@ -38,7 +38,16 @@ trait TypeValueEncodable {
     fn default_encoding() -> (Self::Type, Self::Value);
 }
 
-/// Marks an instantaneous event in the application. A marker can contain a text message or specify additional information using the event attributes structure. These attributes include a text message, color, category, and a payload. Each of the attributes is optional.
+/// Marks an instantaneous event in the application.
+///
+/// A marker can contain a text message or specify additional information using the event attributes structure. These attributes include a text message, color, category, and a payload. Each of the attributes is optional.
+/// ```
+/// nvtx::mark("Sample mark");
+///
+/// nvtx::mark(c"Another example");
+///
+/// nvtx::mark(nvtx::EventAttributeBuilder::default().message("Interesting example").color(nvtx::colors::red).build());
+/// ```
 pub fn mark(argument: impl Into<EventArgument>) {
     match argument.into() {
         EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
@@ -47,7 +56,16 @@ pub fn mark(argument: impl Into<EventArgument>) {
     }
 }
 
-/// Name an active thread of the current process. If an invalid thread ID is provided or a thread ID from a different process is used the behavior of the tool is implementation dependent.
+/// Name an active thread of the current process.
+///
+/// If an invalid thread ID is provided or a thread ID from a different process is used the behavior of the tool is implementation dependent.
+///
+/// See [`Str`] for valid conversions
+///
+/// Note: getting the native TID is not necessarily simple. If you are trying to name the current thread, please use [`name_current_thread`]
+/// ```
+/// nvtx::name_thread(get_native_tid(), "My custom name");
+/// ```
 pub fn name_thread(native_tid: u32, name: impl Into<Str>) {
     match name.into() {
         Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadA(native_tid, s.as_ptr()) },
@@ -59,6 +77,11 @@ pub fn name_thread(native_tid: u32, name: impl Into<Str>) {
 
 #[cfg(feature = "name-current-thread")]
 /// Name the current thread of the current process
+///
+/// See [`Str`] for valid conversions
+/// ```
+/// nvtx::name_current_thread("Main thread");
+/// ```
 pub fn name_current_thread(name: impl Into<Str>) {
     let tid = gettid::gettid() as u32;
     match name.into() {
@@ -68,11 +91,21 @@ pub fn name_current_thread(name: impl Into<Str>) {
 }
 
 /// Register a new category within the default (global) scope. Categories are used to group sets of events.
+///
+/// See [`Str`] for valid conversions
+/// ```
+/// let cat_a = nvtx::register_category("Category A");
+/// ```
 pub fn register_category(name: impl Into<Str>) -> Category {
     Category::new(name)
 }
 
 /// Register many categories within the default (global) scope. Categories are used to group sets of events.
+///
+/// See [`Str`] for valid conversions
+/// ```
+/// let [cat_a, cat_b] = nvtx::register_categories(["Category A", "Category B"]);
+/// ```
 pub fn register_categories<const C: usize>(names: [impl Into<Str>; C]) -> [Category; C] {
     names.map(register_category)
 }

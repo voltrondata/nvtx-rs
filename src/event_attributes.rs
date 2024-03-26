@@ -45,6 +45,17 @@ impl EventAttributes {
 }
 
 /// Builder to facilitate easier construction of [`EventAttributes`]
+///
+/// ```
+/// let cat = nvtx::Category::new("Category1");
+///
+/// let attr = nvtx::EventAttributesBuilder::default()
+///                .category(&cat)
+///                .color(nvtx::color::salmon)
+///                .payload(3.141592)
+///                .message("Hello")
+///                .build();
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct EventAttributesBuilder<'a> {
     pub(super) category: Option<&'a Category>,
@@ -54,31 +65,69 @@ pub struct EventAttributesBuilder<'a> {
 }
 
 impl<'a> EventAttributesBuilder<'a> {
-    /// update the attribute's category
+    /// Update the builder's held [`Category`].
+    ///
+    /// ```
+    /// let cat = nvtx::Category::new("Category1");
+    /// let attr = nvtx::EventAttributesBuilder::default()
+    ///                 // Sample usage for this API
+    ///                 .category(&cat)
+    ///                 .message("a simple range with category")
+    ///                 .build();
+    /// let range = nvtx::Range::new(attr);
+    /// ```
     pub fn category(mut self, category: &'a Category) -> EventAttributesBuilder<'a> {
         self.category = Some(category);
         self
     }
 
-    /// update the attribute's color
+    /// Update the builder's held [`Color`]. See [`Color`] for valid conversions.
+    ///
+    /// ```
+    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// // ...
+    /// let builder = builder.color(nvtx::color::white);
+    /// ```
     pub fn color(mut self, color: impl Into<Color>) -> EventAttributesBuilder<'a> {
         self.color = Some(color.into());
         self
     }
 
-    /// update the attribute's payload
+    /// Update the builder's held [`Payload`]. See [`Payload`] for valid conversions.
+    ///
+    /// ```
+    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// // ...
+    /// let builder = builder.payload(3.1415926535);
+    /// ```
     pub fn payload(mut self, payload: impl Into<Payload>) -> EventAttributesBuilder<'a> {
         self.payload = Some(payload.into());
         self
     }
 
-    /// update the attribute's message
+    /// Update the the builder's held [`Message`]. See [`Message`] for valid conversions.
+    ///
+    /// ```
+    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// // ...
+    /// let builder = builder.message("test");
+    /// ```
     pub fn message(mut self, message: impl Into<Message>) -> EventAttributesBuilder<'a> {
         self.message = Some(message.into());
         self
     }
 
-    /// build the attribute from the builder's state
+    /// Construct an [`EventAttributes`] from the builder's held state
+    ///
+    /// ```
+    /// let cat = nvtx::Category::new("Category1");
+    /// let attr = nvtx::EventAttributesBuilder::default()
+    ///                 .message("Example Range")
+    ///                 .color(nvtx::colors::blanchedalmond)
+    ///                 .category(&cat)
+    ///                 .payload(1234567)
+    ///                 .build();
+    /// ```
     pub fn build(self) -> EventAttributes {
         EventAttributes {
             category: self.category.copied(),

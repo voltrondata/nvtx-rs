@@ -3,6 +3,17 @@ use crate::TypeValueEncodable;
 pub use color_name::colors::*;
 
 /// Represents a color in use for controlling appearance within NSight Systems
+///
+/// ```
+/// // creation of a color from specific channel values:
+/// let translucent_orange = nvtx::Color::new(255, 192, 0, 128);
+///
+/// // creation of a color from pre-specified names:
+/// #[cfg(feature = "color-name")]
+/// let salmon : nvtx::Color = nvtx::colors::salmon.into();
+///
+/// // modification of a color after creation:
+/// let translucent_salmon = salmon.with_alpha(128);
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
     /// alpha channel

@@ -2,6 +2,9 @@ use std::ffi::{CStr, CString};
 use widestring::WideCString;
 
 /// A convenience wrapper for various string types
+///
+/// * [`Str::Ascii`] is the discriminator for C string types
+/// * [`Str::Unicode`] is the discriminator for Rust string types
 #[derive(Debug, Clone)]
 pub enum Str {
     /// Represents an ASCII friendly string

@@ -12,6 +12,21 @@ pub struct LocalRange {
 
 impl LocalRange {
     /// Create an RAII-friendly range type which (1) cannot be moved across thread boundaries and (2) automatically ended when dropped. Panics on drop() if the opening level doesn't match the closing level (since it must model a perfect stack).
+    ///
+    /// ```
+    /// // creation from a unicode string
+    /// let range = nvtx::LocalRange::new("simple name");
+    ///
+    /// // creation from a c string (from rust 1.77+)
+    /// let range = nvtx::LocalRange::new(c"simple name");
+    ///
+    /// // creation from an EventAttribute
+    /// let attr = nvtx::EventAttributeBuilder::default().payload(1).message("complex range").build();
+    /// let range = nvtx::LocalRange::new(attr);
+    ///
+    /// // explicitly end a range
+    /// drop(range)
+    /// ```
     pub fn new(arg: impl Into<EventArgument>) -> LocalRange {
         let argument = arg.into();
         let level = match &argument {

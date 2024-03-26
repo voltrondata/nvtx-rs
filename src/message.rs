@@ -3,6 +3,9 @@ use std::ffi::{CStr, CString};
 use widestring::WideCString;
 
 /// Represents a message for use within events and ranges
+///
+/// * [`Message::Ascii`] is the discriminator for C strings
+/// * [`Message::Unicode`] is the discriminator for Rust strings
 #[derive(Debug, Clone)]
 pub enum Message {
     /// discriminant for an owned ASCII string
