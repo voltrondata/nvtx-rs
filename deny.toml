@@ -1,8 +1,16 @@
 [licenses]
-allow-osi-fsf-free = "both"
-copyleft = "deny"
-default = "deny"
-allow = ["Unicode-DFS-2016", "CC0-1.0", "OpenSSL"]
+allow = [
+    "0BSD",
+    "Apache-2.0 WITH LLVM-exception",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    #"CC0-1.0",
+    "ISC",
+    "MIT",
+    #"OpenSSL",
+    "Unicode-DFS-2016",
+    #"Zlib",
+]
 private = { ignore = true }
 
 [[licenses.clarify]]
