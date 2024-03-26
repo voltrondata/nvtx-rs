@@ -1,10 +1,16 @@
-use std::{ffi::{c_long, CString}, thread::{self, sleep}, time::Duration};
+use std::{
+    ffi::{c_long, CString},
+    thread::{self, sleep},
+    time::Duration,
+};
 
 pub fn gettid() -> u32 {
     const SYS_GETTID: c_long = 186;
-    extern "C" { fn syscall(num: c_long, ...) -> c_long; }
+    extern "C" {
+        fn syscall(num: c_long, ...) -> c_long;
+    }
     unsafe { syscall(SYS_GETTID) as u32 }
-  }
+}
 
 fn main() {
     nvtx::name_thread(gettid(), CString::new("Main Thread").unwrap());
