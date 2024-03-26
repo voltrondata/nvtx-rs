@@ -8,6 +8,7 @@ pub use crate::{
     domain::Domain,
     event_argument::EventArgument,
     event_attributes::{EventAttributes, EventAttributesBuilder},
+    local_range::LocalRange,
     message::Message,
     payload::Payload,
     range::Range,
@@ -24,6 +25,7 @@ pub mod sync;
 mod category;
 mod event_argument;
 mod event_attributes;
+mod local_range;
 mod message;
 mod payload;
 mod range;

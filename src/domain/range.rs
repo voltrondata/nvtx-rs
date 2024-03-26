@@ -10,10 +10,7 @@ pub struct Range<'a> {
 }
 
 impl<'a> Range<'a> {
-    pub(super) fn new(
-        arg: impl Into<EventArgument<'a>>,
-        domain: &'a Domain,
-    ) -> Range<'a> {
+    pub(super) fn new(arg: impl Into<EventArgument<'a>>, domain: &'a Domain) -> Range<'a> {
         let argument = arg.into();
         let arg = match argument {
             EventArgument::EventAttribute(attr) => attr,

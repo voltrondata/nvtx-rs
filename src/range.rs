@@ -7,7 +7,7 @@ pub struct Range {
 }
 
 impl Range {
-    /// Create an RAII-friendly range type which can (1) be moved across thread boundaries and (2) automatically ended when dropped
+    /// Create an RAII-friendly range type which (1) can be moved across thread boundaries and (2) automatically ended when dropped
     pub fn new(arg: impl Into<EventArgument>) -> Range {
         let argument = arg.into();
         let id = match &argument {
