@@ -234,10 +234,10 @@ impl Domain {
     /// ```
     pub fn name_resource<'a>(
         &'a self,
-        identifier: impl Into<Identifier<'a>>,
+        identifier: impl Into<Identifier>,
         name: impl Into<Message<'a>>,
     ) -> Resource<'a> {
-        let materialized_identifier: Identifier<'a> = identifier.into();
+        let materialized_identifier: Identifier = identifier.into();
         let materialized_name: Message = name.into();
         let (msg_type, msg_value) = materialized_name.encode();
         let (id_type, id_value) = materialized_identifier.encode();
