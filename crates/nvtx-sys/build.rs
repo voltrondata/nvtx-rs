@@ -25,6 +25,13 @@ fn main() {
         .wrap_unsafe_ops(true)
         .must_use_type("nvtxRangeId_t")
         .must_use_type("nvtxStringHandle_t")
+        .allowlist_type("nvtx.*")
+        .allowlist_var("nvtx.*")
+        .allowlist_var("NVTX.*")
+        .allowlist_function("nvtx.*")
+        .allowlist_type("wchar_t")
+        .blocklist_type(".*fntype.*")
+        .blocklist_type("__.*")
         .generate()
         .expect("Unable to generate bindings");
 
