@@ -1,20 +1,22 @@
-use super::{EventAttributes, RegisteredString};
+use super::{EventAttributes, Message, RegisteredString};
 use std::ffi::CString;
 use widestring::WideCString;
 
 /// Convenience wrapper for all valid argument types to ranges and marks
 ///
 /// * Any string type will be translated to [`EventArgument::Ascii`], [`EventArgument::Unicode`], or [`EventArgument::Registered`] depending on its type.
-/// * If [`EventArgument::EventAttribute`] is the active discriminator and its held [`EventAttributes`] only specifies a message, it will automatically be converted into the message's underlying active discriminant. Otherwise, the existing [`EventAttributes`] will be used for the event.
+/// * If [`EventArgument::EventAttribute`] is the active discriminator:
+///   - The if its held [`EventAttributes`] only specifies a message, it will be converted into the message's active discriminator.
+///   - Otherwise, the existing [`EventAttributes`] will be used for the event.
 #[derive(Debug, Clone)]
 pub enum EventArgument<'a> {
-    /// discriminant for an owned ASCII string
+    /// discriminator for an owned ASCII string
     Ascii(CString),
-    /// discriminant for an owned Unicode string
+    /// discriminator for an owned Unicode string
     Unicode(WideCString),
-    /// discriminant for a referenced registered string
+    /// discriminator for a referenced registered string
     Registered(&'a RegisteredString<'a>),
-    /// discriminant for a detailed Attribute
+    /// discriminator for a detailed Attribute
     EventAttribute(EventAttributes<'a>),
 }
 
@@ -26,7 +28,11 @@ impl<'a, T: Into<EventAttributes<'a>>> From<T> for EventArgument<'a> {
                 color: None,
                 payload: None,
                 message: Some(m),
-            } => m.into(),
+            } => match m {
+                Message::Ascii(s) => EventArgument::Ascii(s),
+                Message::Unicode(s) => EventArgument::Unicode(s),
+                Message::Registered(s) => EventArgument::Registered(s),
+            },
             attr => EventArgument::EventAttribute(attr),
         }
     }

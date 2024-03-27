@@ -1,18 +1,19 @@
-use crate::EventAttributes;
+use crate::{EventAttributes, Message};
 use std::ffi::CString;
 use widestring::WideCString;
 
 /// Convenience wrapper for all valid argument types to ranges and marks
 ///
 /// * Any string type will be translated to [`EventArgument::Ascii`] or [`EventArgument::Unicode`] depending on its type.
-/// * If [`EventArgument::EventAttribute`] is the active discriminator and its held [`EventAttributes`] only specifies a message, it will automatically be converted into the message's underlying active discriminant. Otherwise, the existing [`EventAttributes`] will be used for the event.
-#[derive(Debug, Clone)]
+/// * If [`EventArgument::EventAttribute`] is the active discriminator:
+///   - Then if its held [`EventAttributes`] only specifies a message, it will be converted into the message's active discriminator.
+///   - Otherwise, the existing [`EventAttributes`] will be used for the event.#[derive(Debug, Clone)]
 pub enum EventArgument {
-    /// discriminant for an owned ASCII string
+    /// discriminator for an owned ASCII string
     Ascii(CString),
-    /// discriminant for an owned Unicode string
+    /// discriminator for an owned Unicode string
     Unicode(WideCString),
-    /// discriminant for a detailed Attribute
+    /// discriminator for a detailed Attribute
     EventAttribute(EventAttributes),
 }
 
@@ -24,7 +25,10 @@ impl<T: Into<EventAttributes>> From<T> for EventArgument {
                 color: None,
                 payload: None,
                 message: Some(m),
-            } => m.into(),
+            } => match m {
+                Message::Ascii(s) => EventArgument::Ascii(s),
+                Message::Unicode(s) => EventArgument::Unicode(s),
+            },
             attr => EventArgument::EventAttribute(attr),
         }
     }

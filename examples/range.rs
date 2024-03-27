@@ -3,7 +3,7 @@ use std::{thread, time};
 fn main() {
     // we must hold ranges with a proper name
     // _ will not work since drop() is called immediately
-    let _x = nvtx::LocalRange::new("Start");
+    let _x = nvtx::LocalRange::new("Start 🦀");
     thread::sleep(time::Duration::from_millis(5));
     for i in 1..=10 {
         {

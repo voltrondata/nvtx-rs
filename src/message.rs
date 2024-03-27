@@ -8,9 +8,9 @@ use widestring::WideCString;
 /// * [`Message::Unicode`] is the discriminator for Rust strings
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// discriminant for an owned ASCII string
+    /// discriminator for an owned ASCII string
     Ascii(CString),
-    /// discriminant for an owned Unicode string
+    /// discriminator for an owned Unicode string
     Unicode(WideCString),
 }
 

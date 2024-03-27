@@ -27,8 +27,7 @@ impl LocalRange {
     /// drop(range)
     /// ```
     pub fn new(arg: impl Into<EventArgument>) -> LocalRange {
-        let argument = arg.into();
-        match &argument {
+        match arg.into() {
             EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
             EventArgument::Unicode(s) => unsafe {
                 nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast())
