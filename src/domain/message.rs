@@ -1,16 +1,20 @@
-use super::registered_string::RegisteredString;
-use crate::TypeValueEncodable;
-use std::ffi::{CStr, CString};
+use super::RegisteredString;
+use crate::{Str, TypeValueEncodable};
+use std::ffi::CString;
 use widestring::WideCString;
 
 /// Represents a message for use within events and ranges
+///
+/// * [`Message::Ascii`] is the discriminator for ASCII C strings
+/// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings
+/// * [`Message::Registered`] is the discriminator for nvtx domain-registered strings
 #[derive(Debug, Clone)]
 pub enum Message<'a> {
-    /// discriminant for an owned ASCII string
+    /// discriminator for an owned ASCII string
     Ascii(CString),
-    /// discriminant for an owned Unicode string
+    /// discriminator for an owned Unicode string
     Unicode(WideCString),
-    /// discriminant for a registered string belonging to a domain
+    /// discriminator for a registered string belonging to a domain
     Registered(&'a RegisteredString<'a>),
 }
 
@@ -20,27 +24,12 @@ impl<'a> From<&'a RegisteredString<'a>> for Message<'a> {
     }
 }
 
-impl From<String> for Message<'_> {
-    fn from(v: String) -> Self {
-        Self::Unicode(WideCString::from_str(v.as_str()).expect("Could not convert to wide string"))
-    }
-}
-
-impl From<&str> for Message<'_> {
-    fn from(v: &str) -> Self {
-        Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
-    }
-}
-
-impl From<CString> for Message<'_> {
-    fn from(v: CString) -> Self {
-        Self::Ascii(v)
-    }
-}
-
-impl From<&CStr> for Message<'_> {
-    fn from(v: &CStr) -> Self {
-        Self::Ascii(CString::from(v))
+impl<'a, T: Into<Str>> From<T> for Message<'a> {
+    fn from(value: T) -> Self {
+        match value.into() {
+            Str::Ascii(s) => Message::Ascii(s),
+            Str::Unicode(s) => Message::Unicode(s),
+        }
     }
 }
 

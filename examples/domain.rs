@@ -26,7 +26,7 @@ fn main() {
     thread::sleep(time::Duration::from_millis(10));
     let yy = xx.success();
     thread::sleep(time::Duration::from_millis(10));
-    let zz = yy.releasing();
+    let zz = yy.release();
     drop(zz);
 
     thread::sleep(time::Duration::from_millis(10));

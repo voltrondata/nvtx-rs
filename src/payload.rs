@@ -1,19 +1,26 @@
 use crate::TypeValueEncodable;
 
-/// Represents a payload value for use within event attributes
+/// Represents a payload value for use within [`crate::EventAttributes`] and [`crate::domain::EventAttributes`]
+///
+/// * [`Payload::Float`] holds a 32-bit floating-point playload
+/// * [`Payload::Double`] holds a 64-bit floating-point playload
+/// * [`Payload::Int32`] holds a 32-bit integral playload
+/// * [`Payload::Int64`] holds a 64-bit integral playload
+/// * [`Payload::Uint32`] holds a 32-bit unsigned integral playload
+/// * [`Payload::Uint64`] holds a 64-bit unsigned integral playload
 #[derive(Debug, Clone, Copy)]
 pub enum Payload {
-    /// the payload shall hold a 32-bit floating-point value
+    /// a 32-bit floating-point value
     Float(f32),
-    /// the payload shall hold a 64-bit floating-point value
+    /// a 64-bit floating-point value
     Double(f64),
-    /// the payload shall hold a 32-bit integral value
+    /// a 32-bit integral value
     Int32(i32),
-    /// the payload shall hold a 64-bit integral value
+    /// a 64-bit integral value
     Int64(i64),
-    /// the payload shall hold a 32-bit unsigned integral value
+    /// a 32-bit unsigned integral value
     Uint32(u32),
-    /// the payload shall hold a 64-bit unsigned integral value
+    /// a 64-bit unsigned integral value
     Uint64(u64),
 }
 

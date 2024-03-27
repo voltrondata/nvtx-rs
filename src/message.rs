@@ -1,37 +1,25 @@
-use crate::TypeValueEncodable;
-use std::ffi::{CStr, CString};
+use crate::{Str, TypeValueEncodable};
+use std::ffi::CString;
 use widestring::WideCString;
 
 /// Represents a message for use within events and ranges
+///
+/// * [`Message::Ascii`] is the discriminator for ASCII C strings
+/// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// discriminant for an owned ASCII string
+    /// discriminator for an owned ASCII string
     Ascii(CString),
-    /// discriminant for an owned Unicode string
+    /// discriminator for an owned Unicode string
     Unicode(WideCString),
 }
 
-impl From<String> for Message {
-    fn from(v: String) -> Self {
-        Self::Unicode(WideCString::from_str(v.as_str()).expect("Could not convert to wide string"))
-    }
-}
-
-impl From<&str> for Message {
-    fn from(v: &str) -> Self {
-        Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
-    }
-}
-
-impl From<CString> for Message {
-    fn from(v: CString) -> Self {
-        Self::Ascii(v)
-    }
-}
-
-impl From<&CStr> for Message {
-    fn from(v: &CStr) -> Self {
-        Self::Ascii(CString::from(v))
+impl<T: Into<Str>> From<T> for Message {
+    fn from(value: T) -> Self {
+        match value.into() {
+            Str::Ascii(s) => Message::Ascii(s),
+            Str::Unicode(s) => Message::Unicode(s),
+        }
     }
 }
 
