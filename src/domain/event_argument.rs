@@ -1,52 +1,33 @@
-use super::{event_attributes::EventAttributes, message::Message};
-use std::ffi::{CStr, CString};
+use super::{EventAttributes, RegisteredString};
+use std::ffi::CString;
 use widestring::WideCString;
 
-/// Convenience wrapper for all valid argument types
+/// Convenience wrapper for all valid argument types to ranges and marks
+///
+/// * Any string type will be translated to [`EventArgument::Ascii`], [`EventArgument::Unicode`], or [`EventArgument::Registered`] depending on its type.
+/// * If [`EventArgument::EventAttribute`] is the active discriminator and its held [`EventAttributes`] only specifies a message, it will automatically be converted into the message's underlying active discriminant. Otherwise, the existing [`EventAttributes`] will be used for the event.
 #[derive(Debug, Clone)]
 pub enum EventArgument<'a> {
     /// discriminant for an owned ASCII string
     Ascii(CString),
     /// discriminant for an owned Unicode string
     Unicode(WideCString),
+    /// discriminant for a referenced registered string
+    Registered(&'a RegisteredString<'a>),
     /// discriminant for a detailed Attribute
     EventAttribute(EventAttributes<'a>),
 }
 
-impl<'a> From<EventAttributes<'a>> for EventArgument<'a> {
-    fn from(value: EventAttributes<'a>) -> Self {
-        match value {
+impl<'a, T: Into<EventAttributes<'a>>> From<T> for EventArgument<'a> {
+    fn from(value: T) -> Self {
+        match value.into() {
             EventAttributes {
                 category: None,
                 color: None,
                 payload: None,
-                message: Some(Message::Ascii(s)),
-            } => EventArgument::Ascii(s),
-            EventAttributes {
-                category: None,
-                color: None,
-                payload: None,
-                message: Some(Message::Unicode(s)),
-            } => EventArgument::Unicode(s),
+                message: Some(m),
+            } => m.into(),
             attr => EventArgument::EventAttribute(attr),
         }
-    }
-}
-
-impl From<&str> for EventArgument<'_> {
-    fn from(v: &str) -> Self {
-        Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
-    }
-}
-
-impl From<CString> for EventArgument<'_> {
-    fn from(v: CString) -> Self {
-        Self::Ascii(v)
-    }
-}
-
-impl From<&CStr> for EventArgument<'_> {
-    fn from(v: &CStr) -> Self {
-        Self::Ascii(CString::from(v))
     }
 }

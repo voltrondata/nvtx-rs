@@ -1,6 +1,4 @@
-use super::{
-    event_argument::EventArgument, event_attributes::EventAttributes, message::Message, Domain,
-};
+use super::{Domain, EventArgument, Message};
 
 /// A RAII-like object for modeling start/end Ranges within a Domain
 #[derive(Debug)]
@@ -14,18 +12,9 @@ impl<'a> Range<'a> {
         let argument = arg.into();
         let arg = match argument {
             EventArgument::EventAttribute(attr) => attr,
-            EventArgument::Ascii(s) => EventAttributes {
-                category: None,
-                color: None,
-                payload: None,
-                message: Some(Message::Ascii(s)),
-            },
-            EventArgument::Unicode(s) => EventAttributes {
-                category: None,
-                color: None,
-                payload: None,
-                message: Some(Message::Unicode(s)),
-            },
+            EventArgument::Ascii(s) => Message::from(s).into(),
+            EventArgument::Unicode(s) => Message::from(s).into(),
+            EventArgument::Registered(s) => Message::from(s).into(),
         };
         let id = unsafe { nvtx_sys::ffi::nvtxDomainRangeStartEx(domain.handle, &arg.encode()) };
         Range { id, domain }

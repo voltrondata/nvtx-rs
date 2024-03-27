@@ -16,8 +16,8 @@ impl Range {
     /// // creation from a c string (from rust 1.77+)
     /// let range = nvtx::Range::new(c"simple name");
     ///
-    /// // creation from an EventAttribute
-    /// let attr = nvtx::EventAttributeBuilder::default().payload(1).message("complex range").build();
+    /// // creation from EventAttributes
+    /// let attr = nvtx::EventAttributesBuilder::default().payload(1).message("complex range").build();
     /// let range = nvtx::Range::new(attr);
     ///
     /// // explicitly end a range

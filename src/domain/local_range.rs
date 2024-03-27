@@ -1,8 +1,5 @@
+use super::{Domain, EventArgument};
 use std::marker::PhantomData;
-
-use super::{
-    event_argument::EventArgument, event_attributes::EventAttributes, message::Message, Domain,
-};
 
 /// A RAII-like object for modeling callstack Ranges within a Domain
 #[derive(Debug)]
@@ -18,18 +15,9 @@ impl<'a> LocalRange<'a> {
         let argument = arg.into();
         let arg = match argument {
             EventArgument::EventAttribute(attr) => attr,
-            EventArgument::Ascii(s) => EventAttributes {
-                category: None,
-                color: None,
-                payload: None,
-                message: Some(Message::Ascii(s)),
-            },
-            EventArgument::Unicode(s) => EventAttributes {
-                category: None,
-                color: None,
-                payload: None,
-                message: Some(Message::Unicode(s)),
-            },
+            EventArgument::Ascii(s) => domain.event_attributes_builder().message(s).build(),
+            EventArgument::Unicode(s) => domain.event_attributes_builder().message(s).build(),
+            EventArgument::Registered(s) => domain.event_attributes_builder().message(s).build(),
         };
         let level = unsafe { nvtx_sys::ffi::nvtxDomainRangePushEx(domain.handle, &arg.encode()) };
         LocalRange {

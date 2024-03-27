@@ -44,6 +44,17 @@ impl EventAttributes {
     }
 }
 
+impl<T: Into<Message>> From<T> for EventAttributes {
+    fn from(value: T) -> Self {
+        EventAttributes {
+            category: None,
+            color: None,
+            payload: None,
+            message: Some(value.into()),
+        }
+    }
+}
+
 /// Builder to facilitate easier construction of [`EventAttributes`]
 ///
 /// ```
@@ -69,12 +80,9 @@ impl<'a> EventAttributesBuilder<'a> {
     ///
     /// ```
     /// let cat = nvtx::Category::new("Category1");
-    /// let attr = nvtx::EventAttributesBuilder::default()
-    ///                 // Sample usage for this API
-    ///                 .category(&cat)
-    ///                 .message("a simple range with category")
-    ///                 .build();
-    /// let range = nvtx::Range::new(attr);
+    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// // ...
+    /// let builder = builder.category(&cat);
     /// ```
     pub fn category(mut self, category: &'a Category) -> EventAttributesBuilder<'a> {
         self.category = Some(category);

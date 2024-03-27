@@ -1,10 +1,10 @@
 use std::ffi::{CStr, CString};
-use widestring::WideCString;
+use widestring::{WideCStr, WideCString};
 
 /// A convenience wrapper for various string types
 ///
 /// * [`Str::Ascii`] is the discriminator for C string types
-/// * [`Str::Unicode`] is the discriminator for Rust string types
+/// * [`Str::Unicode`] is the discriminator for Rust string types and C wide string types
 #[derive(Debug, Clone)]
 pub enum Str {
     /// Represents an ASCII friendly string
@@ -21,7 +21,7 @@ impl From<String> for Str {
 
 impl From<&str> for Str {
     fn from(v: &str) -> Self {
-        Self::Unicode(WideCString::from_str(v).expect("Could not convert to wide string"))
+        String::from(v).into()
     }
 }
 
@@ -33,6 +33,18 @@ impl From<CString> for Str {
 
 impl From<&CStr> for Str {
     fn from(v: &CStr) -> Self {
-        Self::Ascii(CString::from(v))
+        CString::from(v).into()
+    }
+}
+
+impl From<WideCString> for Str {
+    fn from(v: WideCString) -> Self {
+        Self::Unicode(v)
+    }
+}
+
+impl From<&WideCStr> for Str {
+    fn from(v: &WideCStr) -> Self {
+        WideCString::from(v).into()
     }
 }
