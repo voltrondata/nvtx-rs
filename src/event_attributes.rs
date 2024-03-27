@@ -131,7 +131,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let cat = nvtx::Category::new("Category1");
     /// let attr = nvtx::EventAttributesBuilder::default()
     ///                 .message("Example Range")
-    ///                 .color(nvtx::colors::blanchedalmond)
+    ///                 .color(nvtx::color::blanchedalmond)
     ///                 .category(&cat)
     ///                 .payload(1234567)
     ///                 .build();

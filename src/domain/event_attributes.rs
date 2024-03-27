@@ -150,7 +150,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let cat = domain.register_category("Category1");
     /// let attr = domain.event_attributes_builder()
     ///                 .message("Example Range")
-    ///                 .color(nvtx::colors::blanchedalmond)
+    ///                 .color(nvtx::color::blanchedalmond)
     ///                 .category(&cat)
     ///                 .payload(1234567)
     ///                 .build();

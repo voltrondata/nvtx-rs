@@ -10,7 +10,7 @@ pub use color_name::colors::*;
 ///
 /// // creation of a color from pre-specified names:
 /// #[cfg(feature = "color-name")]
-/// let salmon : nvtx::Color = nvtx::colors::salmon.into();
+/// let salmon : nvtx::Color = nvtx::color::salmon.into();
 ///
 /// // modification of a color after creation:
 /// let translucent_salmon = salmon.with_alpha(128);

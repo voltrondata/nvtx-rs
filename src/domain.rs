@@ -167,7 +167,7 @@ impl Domain {
     ///
     /// domain.mark(c"Another example");
     ///
-    /// domain.mark(domain.event_attributes_builder().message("Interesting example").color(nvtx::colors::red).build());
+    /// domain.mark(domain.event_attributes_builder().message("Interesting example").color(nvtx::color::red).build());
     ///
     /// let reg_str = domain.register_string("Registered String");
     /// domain.mark()
