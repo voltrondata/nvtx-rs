@@ -64,7 +64,7 @@ pub fn mark(argument: impl Into<EventArgument>) {
 ///
 /// Note: getting the native TID is not necessarily simple. If you are trying to name the current thread, please use [`name_current_thread`]
 /// ```
-/// nvtx::name_thread(get_native_tid(), "My custom name");
+/// nvtx::name_thread(12345, "My custom name");
 /// ```
 pub fn name_thread(native_tid: u32, name: impl Into<Str>) {
     match name.into() {

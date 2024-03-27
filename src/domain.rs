@@ -170,7 +170,7 @@ impl Domain {
     /// domain.mark(domain.event_attributes_builder().message("Interesting example").color(nvtx::color::red).build());
     ///
     /// let reg_str = domain.register_string("Registered String");
-    /// domain.mark()
+    /// domain.mark(&reg_str);
     /// ```
     pub fn mark<'a>(&'a self, arg: impl Into<EventArgument<'a>>) {
         let attribute: EventAttributes<'a> = match arg.into() {
@@ -186,7 +186,7 @@ impl Domain {
     /// Create an RAII-friendly, domain-owned range type which (1) cannot be moved across thread boundaries and (2) automatically ended when dropped. Panics on drop() if the opening level doesn't match the closing level (since it must model a perfect stack).
     ///
     /// ```
-    /// let domain = nxtx::Domain::new("Domain");
+    /// let domain = nvtx::Domain::new("Domain");
     ///
     /// // creation from Rust string
     /// let range = domain.local_range("simple name");
@@ -208,7 +208,7 @@ impl Domain {
     /// Create an RAII-friendly, domain-owned range type which (1) can be moved across thread boundaries and (2) automatically ended when dropped
     ///
     /// ```
-    /// let domain = nxtx::Domain::new("Domain");
+    /// let domain = nvtx::Domain::new("Domain");
     ///
     /// // creation from a unicode string
     /// let range = domain.range("simple name");

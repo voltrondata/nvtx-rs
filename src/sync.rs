@@ -11,7 +11,7 @@ impl<'a> UserSync<'a> {
     ///
     /// ```
     /// let d = nvtx::Domain::new("domain");
-    /// let us = d.user_sync();
+    /// let us = d.user_sync("custom object");
     /// // ...
     /// let started = us.acquire();
     /// ```
@@ -38,7 +38,7 @@ impl<'a> UserSyncAcquireStart<'a> {
     ///
     /// ```
     /// let d = nvtx::Domain::new("domain");
-    /// let us = d.user_sync();
+    /// let us = d.user_sync("custom object");
     /// // ...
     /// let started = us.acquire();
     /// // ...
@@ -54,7 +54,7 @@ impl<'a> UserSyncAcquireStart<'a> {
     ///
     /// ```
     /// let d = nvtx::Domain::new("domain");
-    /// let us = d.user_sync();
+    /// let us = d.user_sync("custom object");
     /// // ...
     /// let started = us.acquire();
     /// // ...
@@ -79,7 +79,7 @@ impl<'a> UserSyncSuccess<'a> {
     ///
     /// ```
     /// let d = nvtx::Domain::new("domain");
-    /// let us = d.user_sync();
+    /// let us = d.user_sync("custom object");
     /// // ...
     /// let started = us.acquire();
     /// // ...

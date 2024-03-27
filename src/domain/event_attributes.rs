@@ -146,7 +146,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// Construct an [`EventAttributes`] from the builder's held state
     ///
     /// ```
-    /// let domain = nvtx::domain::new("Domain");
+    /// let domain = nvtx::Domain::new("Domain");
     /// let cat = domain.register_category("Category1");
     /// let attr = domain.event_attributes_builder()
     ///                 .message("Example Range")

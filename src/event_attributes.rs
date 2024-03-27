@@ -80,7 +80,7 @@ impl<'a> EventAttributesBuilder<'a> {
     ///
     /// ```
     /// let cat = nvtx::Category::new("Category1");
-    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// let builder = nvtx::EventAttributesBuilder::default();
     /// // ...
     /// let builder = builder.category(&cat);
     /// ```
@@ -92,7 +92,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// Update the builder's held [`Color`]. See [`Color`] for valid conversions.
     ///
     /// ```
-    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// let builder = nvtx::EventAttributesBuilder::default();
     /// // ...
     /// let builder = builder.color(nvtx::color::white);
     /// ```
@@ -104,7 +104,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// Update the builder's held [`Payload`]. See [`Payload`] for valid conversions.
     ///
     /// ```
-    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// let builder = nvtx::EventAttributesBuilder::default();
     /// // ...
     /// let builder = builder.payload(3.1415926535);
     /// ```
@@ -116,7 +116,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// Update the the builder's held [`Message`]. See [`Message`] for valid conversions.
     ///
     /// ```
-    /// let builder = nvtx::EventAttributesBuilder::default()
+    /// let builder = nvtx::EventAttributesBuilder::default();
     /// // ...
     /// let builder = builder.message("test");
     /// ```
