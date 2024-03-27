@@ -5,8 +5,8 @@ use widestring::WideCString;
 
 /// Represents a message for use within events and ranges
 ///
-/// * [`Message::Ascii`] is the discriminator for C strings
-/// * [`Message::Unicode`] is the discriminator for Rust strings
+/// * [`Message::Ascii`] is the discriminator for ASCII C strings
+/// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings
 /// * [`Message::Registered`] is the discriminator for nvtx domain-registered strings
 #[derive(Debug, Clone)]
 pub enum Message<'a> {

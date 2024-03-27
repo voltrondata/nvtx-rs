@@ -1,19 +1,18 @@
 #![deny(missing_docs)]
 
 //! crate for interfacing with NVIDIA's nvtx API
-
-pub use crate::{
-    category::Category,
-    color::Color,
-    domain::Domain,
-    event_argument::EventArgument,
-    event_attributes::{EventAttributes, EventAttributesBuilder},
-    local_range::LocalRange,
-    message::Message,
-    payload::Payload,
-    range::Range,
-    str::Str,
-};
+//!
+//! When not running within NSight profilers, the calls will dispatch to
+//! empty method stubs, thus enabling low-overhead profiling.
+//!
+//! * All events are fully supported:
+//!   * process ranges [`crate::Range`] and [`crate::domain::Range`]
+//!   * thread ranges [`crate::LocalRange`] and [`crate::domain::LocalRange`]
+//!   * marks [`crate::mark`] and [`crate::Domain::mark`]
+//! * Naming threads is fully supported (See [`crate::name_thread`] and [`crate::name_current_thread`])
+//! * Domain, category, and registered strings are fully supported.
+//! * The user-defined synchronization API is implemented
+//! * The user-defined resource naming API is implemented for generic types only.
 
 /// color support
 pub mod color;
@@ -28,6 +27,19 @@ mod message;
 mod payload;
 mod range;
 mod str;
+
+pub use crate::{
+    category::Category,
+    color::Color,
+    domain::Domain,
+    event_argument::EventArgument,
+    event_attributes::{EventAttributes, EventAttributesBuilder},
+    local_range::LocalRange,
+    message::Message,
+    payload::Payload,
+    range::Range,
+    str::Str,
+};
 
 trait TypeValueEncodable {
     type Type;
@@ -48,9 +60,11 @@ trait TypeValueEncodable {
 /// ```
 pub fn mark(argument: impl Into<EventArgument>) {
     match argument.into() {
-        EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
-        EventArgument::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
-        EventArgument::EventAttribute(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a.encode()) },
+        EventArgument::Message(m) => match m {
+            Message::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
+            Message::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
+        },
+        EventArgument::Attributes(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a.encode()) },
     }
 }
 

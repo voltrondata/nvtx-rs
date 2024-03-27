@@ -1,6 +1,5 @@
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use crate::Str;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 /// Represents a category for use with event and range grouping. See also: [`crate::register_category`], [`crate::register_categories`]
 #[derive(Debug, Clone, Copy)]

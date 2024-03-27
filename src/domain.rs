@@ -1,14 +1,3 @@
-pub use self::{
-    category::Category,
-    event_argument::EventArgument,
-    event_attributes::{EventAttributes, EventAttributesBuilder},
-    identifier::Identifier,
-    local_range::LocalRange,
-    message::Message,
-    range::Range,
-    registered_string::RegisteredString,
-    resource::Resource,
-};
 use crate::{Str, TypeValueEncodable};
 use std::{
     marker::PhantomData,
@@ -27,6 +16,18 @@ mod resource;
 /// user-defined synchronization objects
 pub mod sync;
 
+pub use self::{
+    category::Category,
+    event_argument::EventArgument,
+    event_attributes::{EventAttributes, EventAttributesBuilder},
+    identifier::Identifier,
+    local_range::LocalRange,
+    message::Message,
+    range::Range,
+    registered_string::RegisteredString,
+    resource::Resource,
+};
+
 /// Represents a domain for high-level grouping
 #[derive(Debug)]
 pub struct Domain {
@@ -42,13 +43,11 @@ impl Domain {
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
     /// ```
-    pub fn new<'a>(name: impl Into<Str>) -> Self {
+    pub fn new(name: impl Into<Str>) -> Self {
         Domain {
             handle: match name.into() {
                 Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
-                Str::Unicode(s) => unsafe {
-                    nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
-                },
+                Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast()) },
             },
             registered_categories: AtomicU32::new(0),
         }
@@ -175,10 +174,8 @@ impl Domain {
     /// ```
     pub fn mark<'a>(&'a self, arg: impl Into<EventArgument<'a>>) {
         let attribute: EventAttributes<'a> = match arg.into() {
-            EventArgument::EventAttribute(attr) => attr,
-            EventArgument::Ascii(s) => Message::from(s).into(),
-            EventArgument::Unicode(s) => Message::from(s).into(),
-            EventArgument::Registered(s) => Message::from(s).into(),
+            EventArgument::Attributes(attr) => attr,
+            EventArgument::Message(m) => m.into(),
         };
         let encoded = attribute.encode();
         unsafe { nvtx_sys::ffi::nvtxDomainMarkEx(self.handle, &encoded) }

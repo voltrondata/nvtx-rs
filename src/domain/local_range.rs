@@ -12,10 +12,8 @@ pub struct LocalRange<'a> {
 impl<'a> LocalRange<'a> {
     pub(super) fn new(arg: impl Into<EventArgument<'a>>, domain: &'a Domain) -> LocalRange<'a> {
         let arg = match arg.into() {
-            EventArgument::EventAttribute(attr) => attr,
-            EventArgument::Ascii(s) => domain.event_attributes_builder().message(s).build(),
-            EventArgument::Unicode(s) => domain.event_attributes_builder().message(s).build(),
-            EventArgument::Registered(s) => domain.event_attributes_builder().message(s).build(),
+            EventArgument::Attributes(attr) => attr,
+            EventArgument::Message(m) => domain.event_attributes_builder().message(m).build(),
         };
         unsafe { nvtx_sys::ffi::nvtxDomainRangePushEx(domain.handle, &arg.encode()) };
         LocalRange {

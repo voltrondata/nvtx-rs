@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::EventArgument;
+use crate::{EventArgument, Message};
 
 /// A RAII-like object for modeling callstack Ranges
 #[derive(Debug)]
@@ -28,13 +28,11 @@ impl LocalRange {
     /// ```
     pub fn new(arg: impl Into<EventArgument>) -> LocalRange {
         match arg.into() {
-            EventArgument::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
-            EventArgument::Unicode(s) => unsafe {
-                nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast())
+            EventArgument::Message(m) => match m {
+                Message::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangePushA(s.as_ptr()) },
+                Message::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangePushW(s.as_ptr().cast()) },
             },
-            EventArgument::EventAttribute(a) => unsafe {
-                nvtx_sys::ffi::nvtxRangePushEx(&a.encode())
-            },
+            EventArgument::Attributes(a) => unsafe { nvtx_sys::ffi::nvtxRangePushEx(&a.encode()) },
         };
         LocalRange {
             _phantom: PhantomData,
