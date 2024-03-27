@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::event_argument::EventArgument;
+use crate::EventArgument;
 
 /// A RAII-like object for modeling callstack Ranges
 #[derive(Debug)]

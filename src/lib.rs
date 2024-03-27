@@ -19,8 +19,6 @@ pub use crate::{
 pub mod color;
 /// specialized types for use within a domain context
 pub mod domain;
-/// user-defined synchronization objects
-pub mod sync;
 
 mod category;
 mod event_argument;

@@ -9,7 +9,6 @@ pub use self::{
     registered_string::RegisteredString,
     resource::Resource,
 };
-pub use crate::sync;
 use crate::{Str, TypeValueEncodable};
 use std::{
     marker::PhantomData,
@@ -25,6 +24,8 @@ mod message;
 mod range;
 mod registered_string;
 mod resource;
+/// user-defined synchronization objects
+pub mod sync;
 
 /// Represents a domain for high-level grouping
 #[derive(Debug)]
@@ -41,11 +42,11 @@ impl Domain {
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
     /// ```
-    pub fn new<'a>(name: impl Into<crate::Str>) -> Self {
+    pub fn new<'a>(name: impl Into<Str>) -> Self {
         Domain {
             handle: match name.into() {
-                crate::Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
-                crate::Str::Unicode(s) => unsafe {
+                Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxDomainCreateA(s.as_ptr()) },
+                Str::Unicode(s) => unsafe {
                     nvtx_sys::ffi::nvtxDomainCreateW(s.as_ptr().cast())
                 },
             },
@@ -81,12 +82,12 @@ impl Domain {
     /// // ...
     /// let my_str = domain.register_string("My immutable string");
     /// ```
-    pub fn register_string(&self, string: impl Into<crate::Str>) -> RegisteredString<'_> {
+    pub fn register_string(&self, string: impl Into<Str>) -> RegisteredString<'_> {
         let handle = match string.into() {
-            crate::Str::Ascii(s) => unsafe {
+            Str::Ascii(s) => unsafe {
                 nvtx_sys::ffi::nvtxDomainRegisterStringA(self.handle, s.as_ptr())
             },
-            crate::Str::Unicode(s) => unsafe {
+            Str::Unicode(s) => unsafe {
                 nvtx_sys::ffi::nvtxDomainRegisterStringW(self.handle, s.as_ptr().cast())
             },
         };
@@ -109,7 +110,7 @@ impl Domain {
     /// ```
     pub fn register_strings<const N: usize>(
         &self,
-        strings: [impl Into<crate::Str>; N],
+        strings: [impl Into<Str>; N],
     ) -> [RegisteredString<'_>; N] {
         strings.map(|string| self.register_string(string))
     }
@@ -125,7 +126,7 @@ impl Domain {
     /// // ...
     /// let cat = domain.register_category("Category");
     /// ```
-    pub fn register_category(&self, name: impl Into<crate::Str>) -> Category<'_> {
+    pub fn register_category(&self, name: impl Into<Str>) -> Category<'_> {
         let id = 1 + self.registered_categories.fetch_add(1, Ordering::SeqCst);
         match name.into() {
             Str::Ascii(s) => unsafe {
@@ -151,7 +152,7 @@ impl Domain {
     /// ```
     pub fn register_categories<const N: usize>(
         &self,
-        names: [impl Into<crate::Str>; N],
+        names: [impl Into<Str>; N],
     ) -> [Category<'_>; N] {
         names.map(|name| self.register_category(name))
     }

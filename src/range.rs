@@ -1,4 +1,4 @@
-use crate::event_argument::EventArgument;
+use crate::EventArgument;
 
 /// A RAII-like object for modeling start/end Ranges
 #[derive(Debug)]
