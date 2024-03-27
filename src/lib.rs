@@ -56,7 +56,7 @@ trait TypeValueEncodable {
 ///
 /// nvtx::mark(c"Another example");
 ///
-/// nvtx::mark(nvtx::EventAttributesBuilder::default().message("Interesting example").color(nvtx::color::red).build());
+/// nvtx::mark(nvtx::EventAttributesBuilder::default().message("Interesting example").color([255, 0, 0]).build());
 /// ```
 pub fn mark(argument: impl Into<EventArgument>) {
     match argument.into() {

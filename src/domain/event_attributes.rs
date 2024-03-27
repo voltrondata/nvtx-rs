@@ -63,7 +63,7 @@ impl<'a, T: Into<Message<'a>>> From<T> for EventAttributes<'a> {
 ///
 /// let attr = nvtx::EventAttributesBuilder::default()
 ///                .category(&cat)
-///                .color(nvtx::color::salmon)
+///                .color([20, 192, 240])
 ///                .payload(3.141592)
 ///                .message("Hello")
 ///                .build();
@@ -103,7 +103,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let domain = nvtx::Domain::new("Domain");
     /// let builder = domain.event_attributes_builder();
     /// // ...
-    /// let builder = builder.color(nvtx::color::white);
+    /// let builder = builder.color([255, 255, 255]);
     /// ```
     pub fn color(mut self, color: impl Into<Color>) -> EventAttributesBuilder<'a> {
         self.color = Some(color.into());
@@ -150,7 +150,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let cat = domain.register_category("Category1");
     /// let attr = domain.event_attributes_builder()
     ///                 .message("Example Range")
-    ///                 .color(nvtx::color::blanchedalmond)
+    ///                 .color([224, 192, 128])
     ///                 .category(&cat)
     ///                 .payload(1234567)
     ///                 .build();
