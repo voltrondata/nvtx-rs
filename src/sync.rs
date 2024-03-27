@@ -88,7 +88,7 @@ impl<'a> UserSyncSuccess<'a> {
     /// let us2 = success.release();
     /// ```
     #[must_use = "Dropping the return will result in the Synchronization Object being destroyed"]
-    pub fn releasing(self) -> UserSync<'a> {
+    pub fn release(self) -> UserSync<'a> {
         unsafe { nvtx_sys::ffi::nvtxDomainSyncUserReleasing(self.sync_object.handle) }
         self.sync_object
     }
