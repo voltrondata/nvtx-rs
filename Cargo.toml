@@ -10,7 +10,7 @@ description = "NVIDIA NVTX bindings for Rust"
 repository = "https://github.com/voltrondata/nvtx-rs"
 readme = "README.md"
 publish = false
-license = "Proprietary"
+license = "Apache-2.0"
 
 [package]
 name = "nvtx"
