@@ -226,14 +226,21 @@ impl Domain {
     }
 
     /// Name a resource
+    ///
+    /// ```
+    /// let domain = nvtx::Domain::new("Domain");
+    /// let pthread_id = 13854;
+    /// domain.name_resource(nvtx::GenericIdentifier::PosixThread(pthread_id), "My custom name");
+    /// ```
     pub fn name_resource<'a>(
         &'a self,
-        identifier: Identifier,
+        identifier: impl Into<Identifier<'a>>,
         name: impl Into<Message<'a>>,
     ) -> Resource<'a> {
-        let materialized_name = name.into();
+        let materialized_identifier: Identifier<'a> = identifier.into();
+        let materialized_name: Message = name.into();
         let (msg_type, msg_value) = materialized_name.encode();
-        let (id_type, id_value) = identifier.encode();
+        let (id_type, id_value) = materialized_identifier.encode();
         let mut attrs = nvtx_sys::ffi::nvtxResourceAttributes_t {
             version: nvtx_sys::ffi::NVTX_VERSION as u16,
             size: 32,
