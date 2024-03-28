@@ -60,6 +60,7 @@ pub enum GenericIdentifier {
 }
 
 /// Identifier used for supported resource types
+#[non_exhaustive]
 pub enum Identifier {
     /// generic identifier
     Generic(GenericIdentifier),
