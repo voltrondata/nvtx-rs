@@ -49,10 +49,8 @@ pub mod color;
 /// specialized types for use within a domain context
 pub mod domain;
 
-#[cfg(feature = "cuda")]
-mod cuda;
-#[cfg(feature = "cuda_runtime")]
-mod cuda_runtime;
+/// platform native types
+pub mod native_types;
 
 mod category;
 mod event_argument;
@@ -62,6 +60,11 @@ mod message;
 mod payload;
 mod range;
 mod str;
+
+#[cfg(feature = "cuda")]
+mod cuda;
+#[cfg(feature = "cuda_runtime")]
+mod cuda_runtime;
 
 pub use crate::{
     category::Category,

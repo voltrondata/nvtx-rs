@@ -1,5 +1,5 @@
+use crate::native_types::{CUcontext, CUdevice, CUevent, CUstream};
 use crate::Str;
-pub use nvtx_sys::ffi::{CUcontext, CUdevice, CUevent, CUstream};
 
 /// Enum for all CUDA types
 pub enum CudaResource {
