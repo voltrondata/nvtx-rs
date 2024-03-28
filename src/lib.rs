@@ -9,9 +9,9 @@
 //!   * process ranges [`crate::Range`] and [`crate::domain::Range`]
 //!   * thread ranges [`crate::LocalRange`] and [`crate::domain::LocalRange`]
 //!   * marks [`crate::mark`] and [`crate::Domain::mark`]
-//! * Naming threads is fully supported (See [`crate::name_thread`] and [`crate::name_current_thread`])
+//! * Naming threads is fully supported (See [`crate::name_thread`] and [`crate::name_current_thread`]).
 //! * Domain, category, and registered strings are fully supported.
-//! * The user-defined synchronization API is implemented
+//! * The user-defined synchronization API is implemented.
 //! * The user-defined resource naming API is implemented for the following platforms:
 //!   * Pthreads (on unix-like platforms)
 //!   * CUDA
@@ -19,10 +19,10 @@
 //!
 //! ## Features
 //!
-//! This crate defines a few features which provide opt-in behavior. By default, all features are enabled
+//! This crate defines a few features which provide opt-in behavior. By default, all features are enabled.
 //!
 //! * **color-names** -
-//!   When enabled, `nvtx::color::` is populated with many human-readable color names
+//!   When enabled, `nvtx::color::` is populated with many human-readable color names.
 //!
 //! * **name-current-thread** -
 //!   When enabled, `name_current_thread` is added to the crate. This may be preferred to manually
@@ -31,12 +31,12 @@
 //! * **cuda** -
 //!   When enabled, `name_cuda_resource` is added to the crate. This enables the naming of CUDA resources
 //!   such as Devices, Contexts, Events, and Streams. The feature also adds `CudaIdentifier` to the
-//!   [`crate::domain`] module to provide an alternative naming mechanism via [`crate::Domain::name_resource`]
+//!   [`crate::domain`] module to provide an alternative naming mechanism via [`crate::Domain::name_resource`].
 //!
 //! * **cuda_runtime** -
 //!   When enabled, `name_cuda_runtime_resource` is added to the crate. This enables the naming of CUDA
 //!   runtime resources such as Devices, Events, and Streams. The feature also adds `CudaRuntimeIdentifier`
-//!   to the [`crate::domain`] module to provide an alternative naming mechanism via [`crate::Domain::name_resource`]
+//!   to the [`crate::domain`] module to provide an alternative naming mechanism via [`crate::Domain::name_resource`].
 //!
 //! ## Platform-specific types
 //!
