@@ -19,6 +19,11 @@ pub mod color;
 /// specialized types for use within a domain context
 pub mod domain;
 
+#[cfg(feature = "cuda")]
+mod cuda;
+#[cfg(feature = "cuda_runtime")]
+mod cuda_runtime;
+
 mod category;
 mod event_argument;
 mod event_attributes;
@@ -40,6 +45,11 @@ pub use crate::{
     range::Range,
     str::Str,
 };
+
+#[cfg(feature = "cuda")]
+pub use cuda::*;
+#[cfg(feature = "cuda_runtime")]
+pub use cuda_runtime::*;
 
 trait TypeValueEncodable {
     type Type;

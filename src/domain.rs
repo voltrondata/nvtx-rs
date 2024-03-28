@@ -20,13 +20,20 @@ pub use self::{
     category::Category,
     event_argument::EventArgument,
     event_attributes::{EventAttributes, EventAttributesBuilder},
-    identifier::Identifier,
+    identifier::{GenericIdentifier, Identifier},
     local_range::LocalRange,
     message::Message,
     range::Range,
     registered_string::RegisteredString,
     resource::Resource,
 };
+
+#[cfg(feature = "cuda")]
+pub use self::identifier::CudaIdentifier;
+#[cfg(feature = "cuda_runtime")]
+pub use self::identifier::CudaRuntimeIdentifier;
+#[cfg(target_family = "unix")]
+pub use self::identifier::PThreadIdentifier;
 
 /// Represents a domain for high-level grouping
 #[derive(Debug)]
@@ -230,7 +237,11 @@ impl Domain {
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
     /// let pthread_id = 13854;
-    /// domain.name_resource(nvtx::GenericIdentifier::PosixThread(pthread_id), "My custom name");
+    /// domain.name_resource(nvtx::domain::GenericIdentifier::PosixThread(pthread_id), "My custom name");
+    /// #[cfg(feature = "cuda")]
+    /// domain.name_resource(nvtx::domain::CudaIdentifier::Device(0), "My device");
+    /// #[cfg(feature = "cuda_runtime")]
+    /// domain.name_resource(nvtx::domain::CudaRuntimeIdentifier::Device(1), "My device");
     /// ```
     pub fn name_resource<'a>(
         &'a self,

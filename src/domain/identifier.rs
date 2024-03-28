@@ -23,6 +23,30 @@ pub enum PThreadIdentifier {
     Once(*const pthread_once_t),
 }
 
+/// Identifiers used for CUDA resources
+#[cfg(feature = "cuda_runtime")]
+pub enum CudaRuntimeIdentifier {
+    /// device
+    Device(i32),
+    /// event
+    Event(crate::cudaEvent_t),
+    /// stream
+    Stream(crate::cudaStream_t),
+}
+
+/// Identifiers used for CUDA resources
+#[cfg(feature = "cuda")]
+pub enum CudaIdentifier {
+    /// context
+    Context(crate::CUcontext),
+    /// device
+    Device(crate::CUdevice),
+    /// event
+    Event(crate::CUevent),
+    /// stream
+    Stream(crate::CUstream),
+}
+
 /// Identifiers used for Generic resources
 pub enum GenericIdentifier {
     /// generic pointer
@@ -42,6 +66,12 @@ pub enum Identifier {
     /// pthread-specific identifier
     #[cfg(target_family = "unix")]
     PThread(PThreadIdentifier),
+    /// cuda specific identifier
+    #[cfg(feature = "cuda")]
+    Cuda(CudaIdentifier),
+    /// cuda runtime specific identifier
+    #[cfg(feature = "cuda_runtime")]
+    CudaRuntime(CudaRuntimeIdentifier),
 }
 
 impl From<GenericIdentifier> for Identifier {
@@ -57,6 +87,20 @@ impl From<PThreadIdentifier> for Identifier {
     }
 }
 
+#[cfg(feature = "cuda")]
+impl From<CudaIdentifier> for Identifier {
+    fn from(value: CudaIdentifier) -> Self {
+        Identifier::Cuda(value)
+    }
+}
+
+#[cfg(feature = "cuda_runtime")]
+impl From<CudaRuntimeIdentifier> for Identifier {
+    fn from(value: CudaRuntimeIdentifier) -> Self {
+        Identifier::CudaRuntime(value)
+    }
+}
+
 impl TypeValueEncodable for Identifier {
     type Type = u32;
     type Value = nvtx_sys::ffi::nvtxResourceAttributes_v0_identifier_t;
@@ -64,25 +108,25 @@ impl TypeValueEncodable for Identifier {
     fn encode(&self) -> (Self::Type, Self::Value) {
         match self {
             Identifier::Generic(g) => match g {
-            GenericIdentifier::Pointer(p) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_POINTER as u32,
-                Self::Value { pValue: *p },
-            ),
-            GenericIdentifier::Handle(h) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32,
-                Self::Value { ullValue: *h },
-            ),
-            GenericIdentifier::NativeThread(t) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE
-                    as u32,
-                Self::Value { ullValue: *t },
-            ),
-            GenericIdentifier::PosixThread(t) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX
-                    as u32,
-                Self::Value { ullValue: *t },
-            ),
-        }
+                GenericIdentifier::Pointer(p) => (
+                    nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_POINTER as u32,
+                    Self::Value { pValue: *p },
+                ),
+                GenericIdentifier::Handle(h) => (
+                    nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32,
+                    Self::Value { ullValue: *h },
+                ),
+                GenericIdentifier::NativeThread(t) => (
+                    nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE
+                        as u32,
+                    Self::Value { ullValue: *t },
+                ),
+                GenericIdentifier::PosixThread(t) => (
+                    nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX
+                        as u32,
+                    Self::Value { ullValue: *t },
+                ),
+            }
             #[cfg(target_family = "unix")]
             Identifier::PThread(p) => match p {
                 PThreadIdentifier::Mutex(m) => (
@@ -108,6 +152,40 @@ impl TypeValueEncodable for Identifier {
                 PThreadIdentifier::Once(o) =>  (
                     nvtx_sys::ffi::nvtxResourceSyncPosixThreadType_t::NVTX_RESOURCE_TYPE_SYNC_PTHREAD_ONCE as u32,
                     Self::Value { pValue: o.cast() }
+                ),
+            },
+            #[cfg(feature = "cuda")]
+            Identifier::Cuda(cuda) => match cuda {
+                CudaIdentifier::Context(id) => (
+                    nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_CONTEXT as u32,
+                    Self::Value { pValue : id.cast() }
+                ),
+                CudaIdentifier::Device(id) => (
+                    nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_DEVICE as u32,
+                    Self::Value { ullValue: *id as u64 }
+                ),
+                CudaIdentifier::Event(id) => (
+                    nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_EVENT as u32,
+                    Self::Value { pValue : id.cast() }
+                ),
+                CudaIdentifier::Stream(id) => (
+                    nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_STREAM as u32,
+                    Self::Value { pValue : id.cast() }
+                ),
+            },
+            #[cfg(feature = "cuda_runtime")]
+            Identifier::CudaRuntime(cudart) => match cudart {
+                CudaRuntimeIdentifier::Device(id) => (
+                    nvtx_sys::ffi::nvtxResourceCUDARTType_t::NVTX_RESOURCE_TYPE_CUDART_DEVICE as u32,
+                    Self::Value { ullValue: *id as u64 }
+                ),
+                CudaRuntimeIdentifier::Event(id) => (
+                    nvtx_sys::ffi::nvtxResourceCUDARTType_t::NVTX_RESOURCE_TYPE_CUDART_EVENT as u32,
+                    Self::Value { pValue : id.cast() }
+                ),
+                CudaRuntimeIdentifier::Stream(id) => (
+                    nvtx_sys::ffi::nvtxResourceCUDARTType_t::NVTX_RESOURCE_TYPE_CUDART_STREAM as u32,
+                    Self::Value { pValue : id.cast() }
                 ),
             },
         }
