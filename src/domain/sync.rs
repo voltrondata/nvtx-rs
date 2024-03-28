@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 /// User Defined Synchronization Object
 pub struct UserSync<'a> {
-    pub(super) handle: nvtx_sys::ffi::nvtxSyncUser_t,
+    pub(super) handle: nvtx_sys::SyncUserHandle,
     pub(super) _lifetime: PhantomData<&'a ()>,
 }
 
@@ -17,14 +17,14 @@ impl<'a> UserSync<'a> {
     /// ```
     #[must_use = "Dropping the return will violate the state machine"]
     pub fn acquire(self) -> UserSyncAcquireStart<'a> {
-        unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireStart(self.handle) }
+        nvtx_sys::nvtxDomainSyncUserAcquireStart(self.handle);
         UserSyncAcquireStart { sync_object: self }
     }
 }
 
 impl<'a> Drop for UserSync<'a> {
     fn drop(&mut self) {
-        unsafe { nvtx_sys::ffi::nvtxDomainSyncUserDestroy(self.handle) }
+        nvtx_sys::nvtxDomainSyncUserDestroy(self.handle)
     }
 }
 
@@ -46,7 +46,7 @@ impl<'a> UserSyncAcquireStart<'a> {
     /// ```
     #[must_use = "Dropping the return will result in the Synchronization Object being destroyed"]
     pub fn failed(self) -> UserSync<'a> {
-        unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireFailed(self.sync_object.handle) }
+        nvtx_sys::nvtxDomainSyncUserAcquireFailed(self.sync_object.handle);
         self.sync_object
     }
 
@@ -62,7 +62,7 @@ impl<'a> UserSyncAcquireStart<'a> {
     /// ```
     #[must_use = "Dropping the return will violate the state machine"]
     pub fn success(self) -> UserSyncSuccess<'a> {
-        unsafe { nvtx_sys::ffi::nvtxDomainSyncUserAcquireSuccess(self.sync_object.handle) }
+        nvtx_sys::nvtxDomainSyncUserAcquireSuccess(self.sync_object.handle);
         UserSyncSuccess {
             sync_object: self.sync_object,
         }
@@ -89,7 +89,7 @@ impl<'a> UserSyncSuccess<'a> {
     /// ```
     #[must_use = "Dropping the return will result in the Synchronization Object being destroyed"]
     pub fn release(self) -> UserSync<'a> {
-        unsafe { nvtx_sys::ffi::nvtxDomainSyncUserReleasing(self.sync_object.handle) }
+        nvtx_sys::nvtxDomainSyncUserReleasing(self.sync_object.handle);
         self.sync_object
     }
 }

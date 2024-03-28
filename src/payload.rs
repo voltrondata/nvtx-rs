@@ -61,32 +61,32 @@ impl From<f32> for Payload {
 }
 
 impl TypeValueEncodable for Payload {
-    type Type = nvtx_sys::ffi::nvtxPayloadType_t;
-    type Value = nvtx_sys::ffi::nvtxEventAttributes_v2_payload_t;
+    type Type = nvtx_sys::PayloadType;
+    type Value = nvtx_sys::PayloadValue;
     fn encode(&self) -> (Self::Type, Self::Value) {
         match self {
             Payload::Float(x) => (
-                nvtx_sys::ffi::nvtxPayloadType_t::NVTX_PAYLOAD_TYPE_FLOAT,
+                Self::Type::NVTX_PAYLOAD_TYPE_FLOAT,
                 Self::Value { fValue: *x },
             ),
             Payload::Double(x) => (
-                nvtx_sys::ffi::nvtxPayloadType_t::NVTX_PAYLOAD_TYPE_DOUBLE,
+                Self::Type::NVTX_PAYLOAD_TYPE_DOUBLE,
                 Self::Value { dValue: *x },
             ),
             Payload::Int32(x) => (
-                nvtx_sys::ffi::nvtxPayloadType_t::NVTX_PAYLOAD_TYPE_INT32,
+                Self::Type::NVTX_PAYLOAD_TYPE_INT32,
                 Self::Value { iValue: *x },
             ),
             Payload::Int64(x) => (
-                nvtx_sys::ffi::nvtxPayloadType_t::NVTX_PAYLOAD_TYPE_INT64,
+                Self::Type::NVTX_PAYLOAD_TYPE_INT64,
                 Self::Value { llValue: *x },
             ),
             Payload::Uint32(x) => (
-                nvtx_sys::ffi::nvtxPayloadType_t::NVTX_PAYLOAD_TYPE_UNSIGNED_INT32,
+                Self::Type::NVTX_PAYLOAD_TYPE_UNSIGNED_INT32,
                 Self::Value { uiValue: *x },
             ),
             Payload::Uint64(x) => (
-                nvtx_sys::ffi::nvtxPayloadType_t::NVTX_PAYLOAD_TYPE_UNSIGNED_INT64,
+                Self::Type::NVTX_PAYLOAD_TYPE_UNSIGNED_INT64,
                 Self::Value { ullValue: *x },
             ),
         }
@@ -94,7 +94,7 @@ impl TypeValueEncodable for Payload {
 
     fn default_encoding() -> (Self::Type, Self::Value) {
         (
-            nvtx_sys::ffi::nvtxPayloadType_t::NVTX_PAYLOAD_UNKNOWN,
+            Self::Type::NVTX_PAYLOAD_UNKNOWN,
             Self::Value { ullValue: 0 },
         )
     }

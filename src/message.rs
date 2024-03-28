@@ -24,17 +24,17 @@ impl<T: Into<Str>> From<T> for Message {
 }
 
 impl TypeValueEncodable for Message {
-    type Type = nvtx_sys::ffi::nvtxMessageType_t;
-    type Value = nvtx_sys::ffi::nvtxMessageValue_t;
+    type Type = nvtx_sys::MessageType;
+    type Value = nvtx_sys::MessageValue;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
         match &self {
             Message::Ascii(s) => (
-                nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_TYPE_ASCII,
+                Self::Type::NVTX_MESSAGE_TYPE_ASCII,
                 Self::Value { ascii: s.as_ptr() },
             ),
             Message::Unicode(s) => (
-                nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_TYPE_UNICODE,
+                Self::Type::NVTX_MESSAGE_TYPE_UNICODE,
                 Self::Value {
                     unicode: s.as_ptr().cast(),
                 },
@@ -44,7 +44,7 @@ impl TypeValueEncodable for Message {
 
     fn default_encoding() -> (Self::Type, Self::Value) {
         (
-            nvtx_sys::ffi::nvtxMessageType_t::NVTX_MESSAGE_UNKNOWN,
+            Self::Type::NVTX_MESSAGE_UNKNOWN,
             Self::Value {
                 ascii: std::ptr::null(),
             },

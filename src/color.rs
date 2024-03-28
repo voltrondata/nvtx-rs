@@ -95,15 +95,15 @@ impl Color {
 }
 
 impl TypeValueEncodable for Color {
-    type Type = nvtx_sys::ffi::nvtxColorType_t;
+    type Type = nvtx_sys::ColorType;
     type Value = u32;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
         let as_u32 = u32::from_ne_bytes([self.a, self.r, self.g, self.b]);
-        (nvtx_sys::ffi::nvtxColorType_t::NVTX_COLOR_ARGB, as_u32)
+        (Self::Type::NVTX_COLOR_ARGB, as_u32)
     }
 
     fn default_encoding() -> (Self::Type, Self::Value) {
-        (nvtx_sys::ffi::nvtxColorType_t::NVTX_COLOR_UNKNOWN, 0)
+        (Self::Type::NVTX_COLOR_UNKNOWN, 0)
     }
 }

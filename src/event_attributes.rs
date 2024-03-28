@@ -10,7 +10,7 @@ pub struct EventAttributes {
 }
 
 impl EventAttributes {
-    pub(super) fn encode(&self) -> nvtx_sys::ffi::nvtxEventAttributes_t {
+    pub(super) fn encode(&self) -> nvtx_sys::EventAttributes {
         let (color_type, color_value) = self
             .color
             .as_ref()
@@ -22,8 +22,8 @@ impl EventAttributes {
             .map(Payload::encode)
             .unwrap_or_else(Payload::default_encoding);
         let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
-        let emit = |(t, v)| nvtx_sys::ffi::nvtxEventAttributes_t {
-            version: nvtx_sys::ffi::NVTX_VERSION as u16,
+        let emit = |(t, v)| nvtx_sys::EventAttributes {
+            version: nvtx_sys::NVTX_VERSION as u16,
             size: 48,
             category: cat,
             colorType: color_type as i32,

@@ -13,3 +13,11 @@ license.workspace = true
 [build-dependencies]
 bindgen = "0.69.4"
 cc = "1.0.90"
+
+[dependencies]
+widestring = "1.0.2"
+
+[features]
+default = []
+cuda = []
+cuda_runtime = []
