@@ -1,6 +1,5 @@
-use crate::TypeValueEncodable;
-
 use super::Identifier;
+use crate::TypeValueEncodable;
 
 /// Identifiers used for Generic resources
 pub enum GenericIdentifier {
@@ -16,41 +15,37 @@ pub enum GenericIdentifier {
 
 impl From<GenericIdentifier> for Identifier {
     fn from(value: GenericIdentifier) -> Self {
-        Identifier::Generic(value)
+        Self::Generic(value)
     }
 }
 
 impl TypeValueEncodable for GenericIdentifier {
     type Type = u32;
-    type Value = nvtx_sys::ffi::nvtxResourceAttributes_v0_identifier_t;
+    type Value = nvtx_sys::ResourceAttributesId;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
+        use nvtx_sys::resource_type::*;
         match self {
-            GenericIdentifier::Pointer(p) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_POINTER as u32,
+            Self::Pointer(p) => (
+                NVTX_RESOURCE_TYPE_GENERIC_POINTER,
                 Self::Value { pValue: *p },
             ),
-            GenericIdentifier::Handle(h) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_HANDLE as u32,
+            Self::Handle(h) => (
+                NVTX_RESOURCE_TYPE_GENERIC_HANDLE,
                 Self::Value { ullValue: *h },
             ),
-            GenericIdentifier::NativeThread(t) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE
-                    as u32,
+            Self::NativeThread(t) => (
+                NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE,
                 Self::Value { ullValue: *t },
             ),
-            GenericIdentifier::PosixThread(t) => (
-                nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX
-                    as u32,
+            Self::PosixThread(t) => (
+                NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX,
                 Self::Value { ullValue: *t },
             ),
         }
     }
 
     fn default_encoding() -> (Self::Type, Self::Value) {
-        (
-            nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_UNKNOWN as u32,
-            Self::Value { ullValue: 0 },
-        )
+        Identifier::default_encoding()
     }
 }

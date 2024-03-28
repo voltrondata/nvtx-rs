@@ -103,11 +103,11 @@ trait TypeValueEncodable {
 /// ```
 pub fn mark(argument: impl Into<EventArgument>) {
     match argument.into() {
-        EventArgument::Message(m) => match m {
-            Message::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxMarkA(s.as_ptr()) },
-            Message::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxMarkW(s.as_ptr().cast()) },
+        EventArgument::Message(m) => match &m {
+            Message::Ascii(s) => nvtx_sys::nvtxMarkA(s),
+            Message::Unicode(s) => nvtx_sys::nvtxMarkW(s),
         },
-        EventArgument::Attributes(a) => unsafe { nvtx_sys::ffi::nvtxMarkEx(&a.encode()) },
+        EventArgument::Attributes(a) => nvtx_sys::nvtxMarkEx(&a.encode()),
     }
 }
 
@@ -122,11 +122,9 @@ pub fn mark(argument: impl Into<EventArgument>) {
 /// nvtx::name_thread(12345, "My custom name");
 /// ```
 pub fn name_thread(native_tid: u32, name: impl Into<Str>) {
-    match name.into() {
-        Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadA(native_tid, s.as_ptr()) },
-        Str::Unicode(s) => unsafe {
-            nvtx_sys::ffi::nvtxNameOsThreadW(native_tid, s.as_ptr().cast())
-        },
+    match &name.into() {
+        Str::Ascii(s) => nvtx_sys::nvtxNameOsThreadA(native_tid, s),
+        Str::Unicode(s) => nvtx_sys::nvtxNameOsThreadW(native_tid, s),
     }
 }
 
@@ -139,9 +137,9 @@ pub fn name_thread(native_tid: u32, name: impl Into<Str>) {
 /// ```
 pub fn name_current_thread(name: impl Into<Str>) {
     let tid = gettid::gettid() as u32;
-    match name.into() {
-        Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadA(tid, s.as_ptr()) },
-        Str::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxNameOsThreadW(tid, s.as_ptr().cast()) },
+    match &name.into() {
+        Str::Ascii(s) => nvtx_sys::nvtxNameOsThreadA(tid, s),
+        Str::Unicode(s) => nvtx_sys::nvtxNameOsThreadW(tid, s),
     }
 }
 

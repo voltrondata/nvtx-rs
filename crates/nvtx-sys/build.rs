@@ -27,17 +27,28 @@ fn main() {
         .default_enum_style(bindgen::EnumVariation::Rust {
             non_exhaustive: false,
         })
+        .constified_enum_module("nvtxResource.*_t")
+        .c_naming(false)
+        .default_macro_constant_type(bindgen::MacroTypeVariation::Signed)
+        .sort_semantically(true)
+        .translate_enum_integer_types(true)
         .wrap_unsafe_ops(true)
-        .must_use_type("nvtxRangeId_t")
-        .must_use_type("nvtxStringHandle_t")
-        .allowlist_type("nvtx.*")
-        .allowlist_var("nvtx.*")
-        .allowlist_var("NVTX.*")
+        // mark any nvxt(...)_t type as required except those starting with nvtxRes
+        .must_use_type("nvtx[^R][^e][^s].*_t")
+        // permit all nvtx-prefixed types except internal ones
+        .allowlist_type("nvtx[^_].*")
+        // expose NVTX_VERSION
+        .allowlist_var("NVTX_VERSION")
+        // expose all nvtx-prefixed functions
         .allowlist_function("nvtx.*")
+        // expose wchar_t for wide function parameters
         .allowlist_type("wchar_t")
+        // allow cuda types
         .allowlist_type("CU.*")
-        .allowlist_type("cuda.*_t")
+        .allowlist_type("cuda.*")
+        // disallow any fntypes
         .blocklist_type(".*fntype.*")
+        // disallow impl-specific
         .blocklist_type("__.*");
 
     if cfg!(feature = "cuda") {

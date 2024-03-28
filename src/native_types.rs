@@ -1,8 +1,8 @@
 #[cfg(feature = "cuda")]
-pub use nvtx_sys::ffi::{CUcontext, CUdevice, CUevent, CUstream};
+pub use nvtx_sys::{CuContext, CuDevice, CuEvent, CuStream};
 
 #[cfg(feature = "cuda_runtime")]
-pub use nvtx_sys::ffi::{cudaEvent_t, cudaStream_t};
+pub use nvtx_sys::{CudaEvent, CudaStream};
 
 #[cfg(target_family = "unix")]
 pub use libc::{

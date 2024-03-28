@@ -1,14 +1,13 @@
 use crate::Str;
-pub use nvtx_sys::ffi::{cudaEvent_t, cudaStream_t};
 
 /// Enum for all CUDA Runtime types
 pub enum CudaRuntimeResource {
     /// device (integer)
     Device(i32),
     /// event
-    Event(cudaEvent_t),
+    Event(nvtx_sys::CudaEvent),
     /// stream
-    Stream(cudaStream_t),
+    Stream(nvtx_sys::CudaStream),
 }
 
 impl From<i32> for CudaRuntimeResource {
@@ -17,14 +16,14 @@ impl From<i32> for CudaRuntimeResource {
     }
 }
 
-impl From<cudaEvent_t> for CudaRuntimeResource {
-    fn from(value: cudaEvent_t) -> Self {
+impl From<nvtx_sys::CudaEvent> for CudaRuntimeResource {
+    fn from(value: nvtx_sys::CudaEvent) -> Self {
         CudaRuntimeResource::Event(value)
     }
 }
 
-impl From<cudaStream_t> for CudaRuntimeResource {
-    fn from(value: cudaStream_t) -> Self {
+impl From<nvtx_sys::CudaStream> for CudaRuntimeResource {
+    fn from(value: nvtx_sys::CudaStream) -> Self {
         CudaRuntimeResource::Stream(value)
     }
 }
@@ -38,23 +37,17 @@ impl From<cudaStream_t> for CudaRuntimeResource {
 /// ```
 pub fn name_cudart_resource(resource: impl Into<CudaRuntimeResource>, name: impl Into<Str>) {
     match resource.into() {
-        CudaRuntimeResource::Device(device) => match name.into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameCudaDeviceA(device, s.as_ptr()) },
-            Str::Unicode(s) => unsafe {
-                nvtx_sys::ffi::nvtxNameCudaDeviceW(device, s.as_ptr().cast())
-            },
+        CudaRuntimeResource::Device(device) => match &name.into() {
+            Str::Ascii(s) => nvtx_sys::nvtxNameCudaDeviceA(device, s),
+            Str::Unicode(s) => nvtx_sys::nvtxNameCudaDeviceW(device, s),
         },
-        CudaRuntimeResource::Event(event) => match name.into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameCudaEventA(event, s.as_ptr()) },
-            Str::Unicode(s) => unsafe {
-                nvtx_sys::ffi::nvtxNameCudaEventW(event, s.as_ptr().cast())
-            },
+        CudaRuntimeResource::Event(event) => match &name.into() {
+            Str::Ascii(s) => unsafe { nvtx_sys::nvtxNameCudaEventA(event, s) },
+            Str::Unicode(s) => unsafe { nvtx_sys::nvtxNameCudaEventW(event, s) },
         },
-        CudaRuntimeResource::Stream(stream) => match name.into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxNameCudaStreamA(stream, s.as_ptr()) },
-            Str::Unicode(s) => unsafe {
-                nvtx_sys::ffi::nvtxNameCudaStreamW(stream, s.as_ptr().cast())
-            },
+        CudaRuntimeResource::Stream(stream) => match &name.into() {
+            Str::Ascii(s) => unsafe { nvtx_sys::nvtxNameCudaStreamA(stream, s) },
+            Str::Unicode(s) => unsafe { nvtx_sys::nvtxNameCudaStreamW(stream, s) },
         },
     }
 }

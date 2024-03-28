@@ -3,7 +3,7 @@ use crate::{EventArgument, Message};
 /// A RAII-like object for modeling start/end Ranges
 #[derive(Debug)]
 pub struct Range {
-    id: nvtx_sys::ffi::nvtxRangeId_t,
+    id: nvtx_sys::RangeId,
 }
 
 impl Range {
@@ -24,13 +24,12 @@ impl Range {
     /// drop(range)
     /// ```
     pub fn new(arg: impl Into<EventArgument>) -> Range {
-        let argument = arg.into();
-        let id = match &argument {
-            EventArgument::Message(m) => match m {
-                Message::Ascii(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartA(s.as_ptr()) },
-                Message::Unicode(s) => unsafe { nvtx_sys::ffi::nvtxRangeStartW(s.as_ptr().cast()) },
+        let id = match arg.into() {
+            EventArgument::Message(m) => match &m {
+                Message::Ascii(s) => nvtx_sys::nvtxRangeStartA(s),
+                Message::Unicode(s) => nvtx_sys::nvtxRangeStartW(s),
             },
-            EventArgument::Attributes(a) => unsafe { nvtx_sys::ffi::nvtxRangeStartEx(&a.encode()) },
+            EventArgument::Attributes(a) => nvtx_sys::nvtxRangeStartEx(&a.encode()),
         };
         Range { id }
     }
@@ -38,7 +37,7 @@ impl Range {
 
 impl Drop for Range {
     fn drop(&mut self) {
-        unsafe { nvtx_sys::ffi::nvtxRangeEnd(self.id) }
+        nvtx_sys::nvtxRangeEnd(self.id)
     }
 }
 

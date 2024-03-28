@@ -1,4 +1,4 @@
-use super::Domain;
+use crate::Domain;
 
 /// Represents a category for use with event and range grouping. See [`Domain::register_category`], [`Domain::register_categories`]
 #[derive(Debug, Clone, Copy)]

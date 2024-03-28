@@ -25,47 +25,45 @@ pub enum PThreadIdentifier {
 
 impl From<PThreadIdentifier> for Identifier {
     fn from(value: PThreadIdentifier) -> Self {
-        Identifier::PThread(value)
+        Self::PThread(value)
     }
 }
 
 impl TypeValueEncodable for PThreadIdentifier {
     type Type = u32;
-    type Value = nvtx_sys::ffi::nvtxResourceAttributes_v0_identifier_t;
+    type Value = nvtx_sys::ResourceAttributesId;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
+        use nvtx_sys::resource_type::*;
         match self {
-            PThreadIdentifier::Mutex(m) => (
-                nvtx_sys::ffi::nvtxResourceSyncPosixThreadType_t::NVTX_RESOURCE_TYPE_SYNC_PTHREAD_MUTEX as u32,
-                Self::Value { pValue: m.cast() }
+            Self::Mutex(m) => (
+                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_MUTEX,
+                Self::Value { pValue: m.cast() },
             ),
-            PThreadIdentifier::Condition(cv) =>  (
-                nvtx_sys::ffi::nvtxResourceSyncPosixThreadType_t::NVTX_RESOURCE_TYPE_SYNC_PTHREAD_CONDITION as u32,
-                Self::Value { pValue: cv.cast() }
+            Self::Condition(cv) => (
+                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_CONDITION,
+                Self::Value { pValue: cv.cast() },
             ),
-            PThreadIdentifier::RWLock(rwl) =>  (
-                nvtx_sys::ffi::nvtxResourceSyncPosixThreadType_t::NVTX_RESOURCE_TYPE_SYNC_PTHREAD_RWLOCK as u32,
-                Self::Value { pValue: rwl.cast() }
+            Self::RWLock(rwl) => (
+                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_RWLOCK,
+                Self::Value { pValue: rwl.cast() },
             ),
-            PThreadIdentifier::Barrier(bar) =>  (
-                nvtx_sys::ffi::nvtxResourceSyncPosixThreadType_t::NVTX_RESOURCE_TYPE_SYNC_PTHREAD_BARRIER as u32,
-                Self::Value { pValue: bar.cast() }
+            Self::Barrier(bar) => (
+                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_BARRIER,
+                Self::Value { pValue: bar.cast() },
             ),
-            PThreadIdentifier::Spinlock(s) =>  (
-                nvtx_sys::ffi::nvtxResourceSyncPosixThreadType_t::NVTX_RESOURCE_TYPE_SYNC_PTHREAD_SPINLOCK as u32,
-                Self::Value { pValue: s.cast() }
+            Self::Spinlock(s) => (
+                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_SPINLOCK,
+                Self::Value { pValue: s.cast() },
             ),
-            PThreadIdentifier::Once(o) =>  (
-                nvtx_sys::ffi::nvtxResourceSyncPosixThreadType_t::NVTX_RESOURCE_TYPE_SYNC_PTHREAD_ONCE as u32,
-                Self::Value { pValue: o.cast() }
+            Self::Once(o) => (
+                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_ONCE,
+                Self::Value { pValue: o.cast() },
             ),
         }
     }
 
     fn default_encoding() -> (Self::Type, Self::Value) {
-        (
-            nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_UNKNOWN as u32,
-            Self::Value { ullValue: 0 },
-        )
+        Identifier::default_encoding()
     }
 }

@@ -1,58 +1,53 @@
 use super::Identifier;
-use crate::{
-    native_types::{CUcontext, CUdevice, CUevent, CUstream},
-    TypeValueEncodable,
-};
+use crate::TypeValueEncodable;
 
 /// Identifiers used for CUDA resources
 pub enum CudaIdentifier {
     /// device
-    Device(CUdevice),
+    Device(nvtx_sys::CuDevice),
     /// context
-    Context(CUcontext),
+    Context(nvtx_sys::CuContext),
     /// event
-    Event(CUevent),
+    Event(nvtx_sys::CuEvent),
     /// stream
-    Stream(CUstream),
+    Stream(nvtx_sys::CuStream),
 }
 
 impl From<CudaIdentifier> for Identifier {
     fn from(value: CudaIdentifier) -> Self {
-        Identifier::Cuda(value)
+        Self::Cuda(value)
     }
 }
 
 impl TypeValueEncodable for CudaIdentifier {
     type Type = u32;
-    type Value = nvtx_sys::ffi::nvtxResourceAttributes_v0_identifier_t;
+    type Value = nvtx_sys::ResourceAttributesId;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
+        use nvtx_sys::resource_type::*;
         match self {
-            CudaIdentifier::Device(id) => (
-                nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_DEVICE as u32,
+            Self::Device(id) => (
+                NVTX_RESOURCE_TYPE_CUDA_DEVICE,
                 Self::Value {
                     ullValue: *id as u64,
                 },
             ),
-            CudaIdentifier::Context(id) => (
-                nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_CONTEXT as u32,
+            Self::Context(id) => (
+                NVTX_RESOURCE_TYPE_CUDA_CONTEXT,
                 Self::Value { pValue: id.cast() },
             ),
-            CudaIdentifier::Event(id) => (
-                nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_EVENT as u32,
+            Self::Event(id) => (
+                NVTX_RESOURCE_TYPE_CUDA_EVENT,
                 Self::Value { pValue: id.cast() },
             ),
-            CudaIdentifier::Stream(id) => (
-                nvtx_sys::ffi::nvtxResourceCUDAType_t::NVTX_RESOURCE_TYPE_CUDA_STREAM as u32,
+            Self::Stream(id) => (
+                NVTX_RESOURCE_TYPE_CUDA_STREAM,
                 Self::Value { pValue: id.cast() },
             ),
         }
     }
 
     fn default_encoding() -> (Self::Type, Self::Value) {
-        (
-            nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_UNKNOWN as u32,
-            Self::Value { ullValue: 0 },
-        )
+        Identifier::default_encoding()
     }
 }

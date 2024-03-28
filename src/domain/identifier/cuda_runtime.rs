@@ -6,44 +6,42 @@ pub enum CudaRuntimeIdentifier {
     /// device
     Device(i32),
     /// event
-    Event(crate::cudaEvent_t),
+    Event(nvtx_sys::CudaEvent),
     /// stream
-    Stream(crate::cudaStream_t),
+    Stream(nvtx_sys::CudaStream),
 }
 
 impl From<CudaRuntimeIdentifier> for Identifier {
     fn from(value: CudaRuntimeIdentifier) -> Self {
-        Identifier::CudaRuntime(value)
+        Self::CudaRuntime(value)
     }
 }
 
 impl TypeValueEncodable for CudaRuntimeIdentifier {
     type Type = u32;
-    type Value = nvtx_sys::ffi::nvtxResourceAttributes_v0_identifier_t;
+    type Value = nvtx_sys::ResourceAttributesId;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
+        use nvtx_sys::resource_type::*;
         match self {
-            CudaRuntimeIdentifier::Device(id) => (
-                nvtx_sys::ffi::nvtxResourceCUDARTType_t::NVTX_RESOURCE_TYPE_CUDART_DEVICE as u32,
+            Self::Device(id) => (
+                NVTX_RESOURCE_TYPE_CUDART_DEVICE,
                 Self::Value {
                     ullValue: *id as u64,
                 },
             ),
-            CudaRuntimeIdentifier::Event(id) => (
-                nvtx_sys::ffi::nvtxResourceCUDARTType_t::NVTX_RESOURCE_TYPE_CUDART_EVENT as u32,
+            Self::Event(id) => (
+                NVTX_RESOURCE_TYPE_CUDART_EVENT,
                 Self::Value { pValue: id.cast() },
             ),
-            CudaRuntimeIdentifier::Stream(id) => (
-                nvtx_sys::ffi::nvtxResourceCUDARTType_t::NVTX_RESOURCE_TYPE_CUDART_STREAM as u32,
+            Self::Stream(id) => (
+                NVTX_RESOURCE_TYPE_CUDART_STREAM,
                 Self::Value { pValue: id.cast() },
             ),
         }
     }
 
     fn default_encoding() -> (Self::Type, Self::Value) {
-        (
-            nvtx_sys::ffi::nvtxResourceGenericType_t::NVTX_RESOURCE_TYPE_UNKNOWN as u32,
-            Self::Value { ullValue: 0 },
-        )
+        Identifier::default_encoding()
     }
 }
