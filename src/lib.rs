@@ -1,8 +1,8 @@
 #![deny(missing_docs)]
 
-//! crate for interfacing with NVIDIA's nvtx API
+//! Crate for interfacing with NVIDIA's nvtx API
 //!
-//! When not running within NSight profilers, the calls will dispatch to
+//! When not running within NSight tools, the calls will dispatch to
 //! empty method stubs, thus enabling low-overhead profiling.
 //!
 //! * All events are fully supported:
@@ -12,7 +12,37 @@
 //! * Naming threads is fully supported (See [`crate::name_thread`] and [`crate::name_current_thread`])
 //! * Domain, category, and registered strings are fully supported.
 //! * The user-defined synchronization API is implemented
-//! * The user-defined resource naming API is implemented for generic types only.
+//! * The user-defined resource naming API is implemented for the following platforms:
+//!   * Pthreads (on unix-like platforms)
+//!   * CUDA
+//!   * CUDA Runtime
+//!
+//! ## Features
+//!
+//! This crate defines a few features which provide opt-in behavior. By default, all features are enabled
+//!
+//! * **color-names** -
+//!   When enabled, `nvtx::color::` is populated with many human-readable color names
+//!
+//! * **name-current-thread** -
+//!   When enabled, `name_current_thread` is added to the crate. This may be preferred to manually
+//!   determining the current OS-native thread ID.
+//!
+//! * **cuda** -
+//!   When enabled, `name_cuda_resource` is added to the crate. This enables the naming of CUDA resources
+//!   such as Devices, Contexts, Events, and Streams. The feature also adds `CudaIdentifier` to the
+//!   [`crate::domain`] module to provide an alternative naming mechanism via [`crate::Domain::name_resource`]
+//!
+//! * **cuda_runtime** -
+//!   When enabled, `name_cuda_runtime_resource` is added to the crate. This enables the naming of CUDA
+//!   runtime resources such as Devices, Events, and Streams. The feature also adds `CudaRuntimeIdentifier`
+//!   to the [`crate::domain`] module to provide an alternative naming mechanism via [`crate::Domain::name_resource`]
+//!
+//! ## Platform-specific types
+//!
+//! * **PThread Resource Naming** -
+//!   `PthreadIdentifier` is added to the [`crate::domain`] module on UNIX-like platforms. This enables the naming
+//!   of Pthread-specific entities such as mutexes, semaphores, condition variables, and read-write-locks.
 
 /// color support
 pub mod color;
