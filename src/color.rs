@@ -99,7 +99,7 @@ impl TypeValueEncodable for Color {
     type Value = u32;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        let as_u32 = u32::from_ne_bytes([self.a, self.r, self.g, self.b]);
+        let as_u32 = u32::from_be_bytes([self.a, self.r, self.g, self.b]);
         (Self::Type::NVTX_COLOR_ARGB, as_u32)
     }
 

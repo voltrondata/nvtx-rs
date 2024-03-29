@@ -1,7 +1,7 @@
 use crate::{EventArgument, Message};
 use std::marker::PhantomData;
 
-/// A RAII-like object for modeling callstack Ranges
+/// A RAII-like object for modeling callstack (thread-local) Ranges
 #[derive(Debug)]
 pub struct LocalRange {
     // prevent Sync + Send

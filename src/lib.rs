@@ -38,6 +38,10 @@
 //!   runtime resources such as Devices, Events, and Streams. The feature also adds `CudaRuntimeIdentifier`
 //!   to the [`crate::domain`] module to provide an alternative naming mechanism via [`crate::Domain::name_resource`].
 //!
+//! * **tracing** -
+//!   When enabled, a tracing `Layer` is provided which consumes tracing spans and events which will yield
+//!   NVTX ranges and marks, respectively. Only a subset of functionality is supported.
+//!
 //! ## Platform-specific types
 //!
 //! * **PThread Resource Naming** -
@@ -46,11 +50,16 @@
 
 /// color support
 pub mod color;
+
 /// specialized types for use within a domain context
 pub mod domain;
 
 /// platform native types
 pub mod native_types;
+
+#[cfg(feature = "tracing")]
+/// tracing support
+pub mod tracing;
 
 mod category;
 mod event_argument;

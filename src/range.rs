@@ -1,6 +1,6 @@
 use crate::{EventArgument, Message};
 
-/// A RAII-like object for modeling start/end Ranges
+/// A RAII-like object for modeling process-wide Ranges
 #[derive(Debug)]
 pub struct Range {
     id: nvtx_sys::RangeId,

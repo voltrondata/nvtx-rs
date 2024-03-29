@@ -224,6 +224,20 @@ impl Domain {
         Range::new(arg, self)
     }
 
+    /// Internal function for starting a range and returning a raw Range Id
+    pub(crate) fn range_start<'a>(&self, arg: impl Into<EventArgument<'a>>) -> u64 {
+        let arg = match arg.into() {
+            EventArgument::Attributes(attr) => attr,
+            EventArgument::Message(m) => m.into(),
+        };
+        nvtx_sys::domain_range_start_ex(self.handle, &arg.encode())
+    }
+
+    /// Internal function for ending a range given a raw Range Id
+    pub(crate) fn range_end(&self, range_id: u64) {
+        nvtx_sys::domain_range_end(self.handle, range_id);
+    }
+
     /// Name a resource
     ///
     /// ```
