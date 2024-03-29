@@ -52,7 +52,7 @@ impl<'a> TypeValueEncodable for Message<'a> {
             Message::Registered(r) => (
                 Self::Type::NVTX_MESSAGE_TYPE_REGISTERED,
                 Self::Value {
-                    registered: r.handle.get_handle(),
+                    registered: r.handle.into(),
                 },
             ),
         }

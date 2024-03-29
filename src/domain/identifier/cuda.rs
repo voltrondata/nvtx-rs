@@ -21,27 +21,26 @@ impl From<CudaIdentifier> for Identifier {
 
 impl TypeValueEncodable for CudaIdentifier {
     type Type = u32;
-    type Value = nvtx_sys::ResourceAttributesId;
+    type Value = nvtx_sys::ResourceAttributesIdentifier;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        use nvtx_sys::resource_type::*;
         match self {
             Self::Device(id) => (
-                NVTX_RESOURCE_TYPE_CUDA_DEVICE,
+                nvtx_sys::resource_type::CUDA_DEVICE,
                 Self::Value {
                     ullValue: *id as u64,
                 },
             ),
             Self::Context(id) => (
-                NVTX_RESOURCE_TYPE_CUDA_CONTEXT,
+                nvtx_sys::resource_type::CUDA_CONTEXT,
                 Self::Value { pValue: id.cast() },
             ),
             Self::Event(id) => (
-                NVTX_RESOURCE_TYPE_CUDA_EVENT,
+                nvtx_sys::resource_type::CUDA_EVENT,
                 Self::Value { pValue: id.cast() },
             ),
             Self::Stream(id) => (
-                NVTX_RESOURCE_TYPE_CUDA_STREAM,
+                nvtx_sys::resource_type::CUDA_STREAM,
                 Self::Value { pValue: id.cast() },
             ),
         }

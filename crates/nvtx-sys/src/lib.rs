@@ -2,6 +2,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+/// The unmodified FFI imported functions, types, and definitions
 pub mod ffi {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
@@ -21,13 +22,20 @@ pub type ResourceAttributes = ffi::nvtxResourceAttributes_t;
 /// Struct representing all possible User-defined Synchronization attributes
 pub type SyncUserAttributes = ffi::nvtxSyncUserAttributes_t;
 
-pub type ResourceAttributesId = ffi::nvtxResourceAttributes_v0_identifier_t;
+/// [`ResourceAttributes`] identifier union
+pub type ResourceAttributesIdentifier = ffi::nvtxResourceAttributes_v0_identifier_t;
+/// [`EventAttributes`] color type
 pub type ColorType = ffi::nvtxColorType_t;
+/// [`EventAttributes`] and [`ResourceAttributes`] message type
 pub type MessageType = ffi::nvtxMessageType_t;
+/// [`EventAttributes`] and [`ResourceAttributes`] message value
 pub type MessageValue = ffi::nvtxMessageValue_t;
+/// [`EventAttributes`] payload type
 pub type PayloadType = ffi::nvtxPayloadType_t;
+/// [`EventAttributes`] payload value union
 pub type PayloadValue = ffi::nvtxEventAttributes_v2_payload_t;
 
+/// Unique handle for a registered domain
 #[derive(Debug, Clone, Copy)]
 pub struct DomainHandle {
     handle: ffi::nvtxDomainHandle_t,
@@ -45,9 +53,9 @@ pub struct StringHandle {
     handle: ffi::nvtxStringHandle_t,
 }
 
-impl StringHandle {
-    pub fn get_handle(&self) -> ffi::nvtxStringHandle_t {
-        self.handle
+impl From<StringHandle> for ffi::nvtxStringHandle_t {
+    fn from(value: StringHandle) -> Self {
+        value.handle
     }
 }
 
@@ -58,97 +66,162 @@ pub struct SyncUserHandle {
 }
 
 #[cfg(feature = "cuda_runtime")]
+/// An opaque CUDA Runtime event type
 pub type CudaEvent = ffi::cudaEvent_t;
 #[cfg(feature = "cuda_runtime")]
+/// An opaque CUDA Runtime stream type
 pub type CudaStream = ffi::cudaStream_t;
 
 #[cfg(feature = "cuda")]
+/// An opaque CUDA context type
 pub type CuContext = ffi::CUcontext;
 #[cfg(feature = "cuda")]
+/// An opaque CUDA device type
 pub type CuDevice = ffi::CUdevice;
 #[cfg(feature = "cuda")]
+/// An opaque CUDA event type
 pub type CuEvent = ffi::CUevent;
 #[cfg(feature = "cuda")]
+/// An opaque CUDA stream type
 pub type CuStream = ffi::CUstream;
 
+/// Resource types for use within [`crate::ResourceAttributes`]
 pub mod resource_type {
-    #![allow(ambiguous_glob_reexports)]
-    #[cfg(feature = "cuda_runtime")]
-    pub use super::ffi::nvtxResourceCUDARTType_t::*;
+    use crate::ffi::nvtxResourceGenericType_t::*;
+    pub const UNKNOWN: u32 = NVTX_RESOURCE_TYPE_UNKNOWN;
+    pub const GENERIC_HANDLE: u32 = NVTX_RESOURCE_TYPE_GENERIC_HANDLE;
+    pub const GENERIC_POINTER: u32 = NVTX_RESOURCE_TYPE_GENERIC_POINTER;
+    pub const GENERIC_THREAD_NATIVE: u32 = NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE;
+    pub const GENERIC_THREAD_POSIX: u32 = NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX;
+
     #[cfg(feature = "cuda")]
-    pub use super::ffi::nvtxResourceCUDAType_t::*;
-    pub use super::ffi::nvtxResourceGenericType_t::*;
+    mod cuda {
+        use crate::ffi::nvtxResourceCUDAType_t::*;
+        pub const CUDA_DEVICE: u32 = NVTX_RESOURCE_TYPE_CUDA_DEVICE;
+        pub const CUDA_CONTEXT: u32 = NVTX_RESOURCE_TYPE_CUDA_CONTEXT;
+        pub const CUDA_STREAM: u32 = NVTX_RESOURCE_TYPE_CUDA_STREAM;
+        pub const CUDA_EVENT: u32 = NVTX_RESOURCE_TYPE_CUDA_EVENT;
+    }
+    #[cfg(feature = "cuda")]
+    pub use cuda::*;
+
+    #[cfg(feature = "cuda_runtime")]
+    mod cuda_runtime {
+        use crate::ffi::nvtxResourceCUDARTType_t::*;
+        pub const CUDART_DEVICE: u32 = NVTX_RESOURCE_TYPE_CUDART_DEVICE;
+        pub const CUDART_STREAM: u32 = NVTX_RESOURCE_TYPE_CUDART_STREAM;
+        pub const CUDART_EVENT: u32 = NVTX_RESOURCE_TYPE_CUDART_EVENT;
+    }
+    #[cfg(feature = "cuda_runtime")]
+    pub use cuda_runtime::*;
+
     #[cfg(target_family = "unix")]
-    pub use super::ffi::nvtxResourceSyncPosixThreadType_t::*;
+    mod pthread {
+        use crate::ffi::nvtxResourceSyncPosixThreadType_t::*;
+        pub const PTHREAD_MUTEX: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_MUTEX;
+        pub const PTHREAD_CONDITION: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_CONDITION;
+        pub const PTHREAD_RWLOCK: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_RWLOCK;
+        pub const PTHREAD_BARRIER: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_BARRIER;
+        pub const PTHREAD_SPINLOCK: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_SPINLOCK;
+        pub const PTHREAD_ONCE: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_ONCE;
+    }
+    #[cfg(target_family = "unix")]
+    pub use pthread::*;
 }
 
 use std::ffi::CStr;
 use widestring::WideCStr;
 
+/// Create a mark within a domain.
 pub fn nvtxDomainMarkEx(domain: DomainHandle, eventAttrib: &EventAttributes) {
     unsafe { crate::ffi::nvtxDomainMarkEx(domain.handle, eventAttrib) }
 }
 
+/// Create a mark with an attributes structure.
 pub fn nvtxMarkEx(eventAttrib: &EventAttributes) {
     unsafe { crate::ffi::nvtxMarkEx(eventAttrib) }
 }
 
+/// Create a mark with an ASCII string.
 pub fn nvtxMarkA(message: &CStr) {
     unsafe { crate::ffi::nvtxMarkA(message.as_ptr()) }
 }
 
+/// Create a mark with a Unicode string.
 pub fn nvtxMarkW(message: &WideCStr) {
     unsafe { crate::ffi::nvtxMarkW(message.as_ptr().cast()) }
 }
 
+#[must_use]
+/// Start a process-visible range within a domain with an attributes structure.
 pub fn nvtxDomainRangeStartEx(domain: DomainHandle, eventAttrib: &EventAttributes) -> RangeId {
     unsafe { crate::ffi::nvtxDomainRangeStartEx(domain.handle, eventAttrib) }
 }
 
+#[must_use]
+/// Start a process-visible range with an attributes structure.
 pub fn nvtxRangeStartEx(eventAttrib: &EventAttributes) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartEx(eventAttrib) }
 }
 
+#[must_use]
+/// Start a process-visible range with an ASCII string.
 pub fn nvtxRangeStartA(message: &CStr) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartA(message.as_ptr()) }
 }
 
+#[must_use]
+/// Start a process-visible range with a Unicde string.
 pub fn nvtxRangeStartW(message: &WideCStr) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartW(message.as_ptr().cast()) }
 }
 
+/// End a process-visible range within a domain.
+///
+/// The range id is created by [`crate::nvtxDomainRangeStartEx`].
 pub fn nvtxDomainRangeEnd(domain: DomainHandle, id: RangeId) {
     unsafe { crate::ffi::nvtxDomainRangeEnd(domain.handle, id) }
 }
 
+/// End a process-visible range.
+///
+/// The range id is created by [`crate::nvtxRangeStartA`] or [`crate::nvtxRangeStartW`] or [`crate::nvtxRangeStartEx`].
 pub fn nvtxRangeEnd(id: RangeId) {
     unsafe { crate::ffi::nvtxRangeEnd(id) }
 }
 
+/// Start a thread-visible range within a domain with an attributes structure.
 pub fn nvtxDomainRangePushEx(domain: DomainHandle, eventAttrib: &EventAttributes) -> i32 {
     unsafe { crate::ffi::nvtxDomainRangePushEx(domain.handle, eventAttrib) }
 }
 
+/// Start a thread-visible range with an attributes structure.
 pub fn nvtxRangePushEx(eventAttrib: &EventAttributes) -> i32 {
     unsafe { crate::ffi::nvtxRangePushEx(eventAttrib) }
 }
 
+/// Start a thread-visible range with an ASCII string.
 pub fn nvtxRangePushA(message: &CStr) -> i32 {
     unsafe { crate::ffi::nvtxRangePushA(message.as_ptr()) }
 }
 
+/// Start a thread-visible range with a Unicode string.
 pub fn nvtxRangePushW(message: &WideCStr) -> i32 {
     unsafe { crate::ffi::nvtxRangePushW(message.as_ptr().cast()) }
 }
 
+/// End a thread-visible range within a domain.
 pub fn nvtxDomainRangePop(domain: DomainHandle) -> i32 {
     unsafe { crate::ffi::nvtxDomainRangePop(domain.handle) }
 }
 
+/// End a thread-visible range.
 pub fn nvtxRangePop() -> i32 {
     unsafe { crate::ffi::nvtxRangePop() }
 }
 
+#[must_use]
+/// Create a named resource within a domain.
 pub fn nvtxDomainResourceCreate(
     domain: DomainHandle,
     attribs: ResourceAttributes,
@@ -163,35 +236,49 @@ pub fn nvtxDomainResourceCreate(
     }
 }
 
+/// Destroy a named resource.
+///
+/// The named resource is created by [`crate::nvtxDomainResourceDestroy`].
 pub fn nvtxDomainResourceDestroy(resource: ResourceHandle) {
     unsafe { crate::ffi::nvtxDomainResourceDestroy(resource.handle) }
 }
 
+/// Name a category within a domain with an ASCII string.
 pub fn nvtxDomainNameCategoryA(domain: DomainHandle, category: u32, name: &CStr) {
     unsafe { crate::ffi::nvtxDomainNameCategoryA(domain.handle, category, name.as_ptr()) }
 }
 
+/// Name a category within a domain with a Unicode string.
 pub fn nvtxDomainNameCategoryW(domain: DomainHandle, category: u32, name: &WideCStr) {
     unsafe { crate::ffi::nvtxDomainNameCategoryW(domain.handle, category, name.as_ptr().cast()) }
 }
 
+/// Name a category with an ASCII string.
 pub fn nvtxNameCategoryA(category: u32, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCategoryA(category, name.as_ptr()) }
 }
 
+/// Name a category with a Unicode string.
 pub fn nvtxNameCategoryW(category: u32, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCategoryW(category, name.as_ptr().cast()) }
 }
 
+/// Name an OS thread with an ASCII string.
+///
+/// Note: the threadId must be an operating-specific thread id. On Linux this would be a process's tid.
 pub fn nvtxNameOsThreadA(threadId: u32, name: &CStr) {
     unsafe { crate::ffi::nvtxNameOsThreadA(threadId, name.as_ptr()) }
 }
 
+/// Name an OS thread with a Unicode string.
+///
+/// Note: the threadId must be an operating-specific thread id. On Linux this would be a process's tid.
 pub fn nvtxNameOsThreadW(threadId: u32, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameOsThreadW(threadId, name.as_ptr().cast()) }
 }
 
 #[must_use]
+/// Register an immutable ASCII string with a domain.
 pub fn nvtxDomainRegisterStringA(domain: DomainHandle, string: &CStr) -> StringHandle {
     StringHandle {
         handle: unsafe { crate::ffi::nvtxDomainRegisterStringA(domain.handle, string.as_ptr()) },
@@ -199,6 +286,7 @@ pub fn nvtxDomainRegisterStringA(domain: DomainHandle, string: &CStr) -> StringH
 }
 
 #[must_use]
+/// Register an immutable Unicode string with a domain.
 pub fn nvtxDomainRegisterStringW(domain: DomainHandle, string: &WideCStr) -> StringHandle {
     StringHandle {
         handle: unsafe {
@@ -208,6 +296,7 @@ pub fn nvtxDomainRegisterStringW(domain: DomainHandle, string: &WideCStr) -> Str
 }
 
 #[must_use]
+/// Create a new domain with a given ASCII string name.
 pub fn nvtxDomainCreateA(name: &CStr) -> DomainHandle {
     DomainHandle {
         handle: unsafe { crate::ffi::nvtxDomainCreateA(name.as_ptr()) },
@@ -215,97 +304,136 @@ pub fn nvtxDomainCreateA(name: &CStr) -> DomainHandle {
 }
 
 #[must_use]
+/// Create a new domain with a given Unicode string name.
 pub fn nvtxDomainCreateW(name: &WideCStr) -> DomainHandle {
     DomainHandle {
         handle: unsafe { crate::ffi::nvtxDomainCreateW(name.as_ptr().cast()) },
     }
 }
 
+/// Destroy a domain.
+///
+/// The domain is created by [`crate::nvtxDomainCreateA`] or [`crate::nvtxDomainCreateW`]).
 pub fn nvtxDomainDestroy(domain: DomainHandle) {
     unsafe { crate::ffi::nvtxDomainDestroy(domain.handle) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA device with an ASCII string.
 pub fn nvtxNameCuDeviceA(device: CuDevice, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCuDeviceA(device, name.as_ptr()) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA device with a Unicode string.
 pub fn nvtxNameCuDeviceW(device: CuDevice, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCuDeviceW(device, name.as_ptr().cast()) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA context with an ASCII string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA context.
 pub unsafe fn nvtxNameCuContextA(context: CuContext, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCuContextA(context, name.as_ptr()) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA context with a Unicode string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA context.
 pub unsafe fn nvtxNameCuContextW(context: CuContext, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCuContextW(context, name.as_ptr().cast()) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA stream with an ASCII string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA stream.
 pub unsafe fn nvtxNameCuStreamA(stream: CuStream, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCuStreamA(stream, name.as_ptr()) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA stream with a Unicode string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA stream.
 pub unsafe fn nvtxNameCuStreamW(stream: CuStream, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCuStreamW(stream, name.as_ptr().cast()) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA event with an ASCII string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA event.
 pub unsafe fn nvtxNameCuEventA(event: CuEvent, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCuEventA(event, name.as_ptr()) }
 }
 
 #[cfg(feature = "cuda")]
+/// Name a CUDA event with a Unicode string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA event.
 pub unsafe fn nvtxNameCuEventW(event: CuEvent, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCuEventW(event, name.as_ptr().cast()) }
 }
 
 #[cfg(feature = "cuda_runtime")]
+/// Name a CUDA Runtime device with an ASCII string.
 pub fn nvtxNameCudaDeviceA(device: i32, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCudaDeviceA(device, name.as_ptr()) }
 }
 
 #[cfg(feature = "cuda_runtime")]
+/// Name a CUDA Runtime device with a Unicode string.
 pub fn nvtxNameCudaDeviceW(device: i32, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCudaDeviceW(device, name.as_ptr().cast()) }
 }
 
 #[cfg(feature = "cuda_runtime")]
+/// Name a CUDA Runtime stream with an ASCII string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA stream.
 pub unsafe fn nvtxNameCudaStreamA(stream: CudaStream, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCudaStreamA(stream, name.as_ptr()) }
 }
 
 #[cfg(feature = "cuda_runtime")]
+/// Name a CUDA Runtime stream with a Unicode string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA stream.
 pub unsafe fn nvtxNameCudaStreamW(stream: CudaStream, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCudaStreamW(stream, name.as_ptr().cast()) }
 }
 
 #[cfg(feature = "cuda_runtime")]
+/// Name a CUDA Runtime event with an ASCII string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA event.
 pub unsafe fn nvtxNameCudaEventA(event: CudaEvent, name: &CStr) {
     unsafe { crate::ffi::nvtxNameCudaEventA(event, name.as_ptr()) }
 }
 
 #[cfg(feature = "cuda_runtime")]
+/// Name a CUDA Runtime event with a Unicode string.
+///
 /// # Safety
+/// This function is marked unsafe because of the pointer parameter referring to the CUDA event.
 pub unsafe fn nvtxNameCudaEventW(event: CudaEvent, name: &WideCStr) {
     unsafe { crate::ffi::nvtxNameCudaEventW(event, name.as_ptr().cast()) }
 }
 
 #[must_use]
+/// Create a new user-defined synchronization within a domain.
 pub fn nvtxDomainSyncUserCreate(
     domain: DomainHandle,
     attribs: SyncUserAttributes,
@@ -320,22 +448,33 @@ pub fn nvtxDomainSyncUserCreate(
     }
 }
 
+/// Destroy a user-defined synchronization (created by [`crate::nvtxDomainSyncUserCreate`]).
 pub fn nvtxDomainSyncUserDestroy(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserDestroy(handle.handle) }
 }
 
+/// Indicate that a user-defined synchronization started to acquire.
 pub fn nvtxDomainSyncUserAcquireStart(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserAcquireStart(handle.handle) }
 }
 
+/// Indicate that a user-defined synchronization acquisition failed.
+///
+/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireStart`].
 pub fn nvtxDomainSyncUserAcquireFailed(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserAcquireFailed(handle.handle) }
 }
 
+/// Indicate that a user-defined synchronization acquisition succeeded.
+///
+/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireStart`].
 pub fn nvtxDomainSyncUserAcquireSuccess(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserAcquireSuccess(handle.handle) }
 }
 
+/// Indicate that a user-defined synchronization is released.
+///
+/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireSuccess`].
 pub fn nvtxDomainSyncUserReleasing(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserReleasing(handle.handle) }
 }

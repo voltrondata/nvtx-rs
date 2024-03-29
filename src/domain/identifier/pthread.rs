@@ -31,33 +31,32 @@ impl From<PThreadIdentifier> for Identifier {
 
 impl TypeValueEncodable for PThreadIdentifier {
     type Type = u32;
-    type Value = nvtx_sys::ResourceAttributesId;
+    type Value = nvtx_sys::ResourceAttributesIdentifier;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        use nvtx_sys::resource_type::*;
         match self {
             Self::Mutex(m) => (
-                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_MUTEX,
+                nvtx_sys::resource_type::PTHREAD_MUTEX,
                 Self::Value { pValue: m.cast() },
             ),
             Self::Condition(cv) => (
-                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_CONDITION,
+                nvtx_sys::resource_type::PTHREAD_CONDITION,
                 Self::Value { pValue: cv.cast() },
             ),
             Self::RWLock(rwl) => (
-                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_RWLOCK,
+                nvtx_sys::resource_type::PTHREAD_RWLOCK,
                 Self::Value { pValue: rwl.cast() },
             ),
             Self::Barrier(bar) => (
-                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_BARRIER,
+                nvtx_sys::resource_type::PTHREAD_BARRIER,
                 Self::Value { pValue: bar.cast() },
             ),
             Self::Spinlock(s) => (
-                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_SPINLOCK,
+                nvtx_sys::resource_type::PTHREAD_SPINLOCK,
                 Self::Value { pValue: s.cast() },
             ),
             Self::Once(o) => (
-                NVTX_RESOURCE_TYPE_SYNC_PTHREAD_ONCE,
+                nvtx_sys::resource_type::PTHREAD_ONCE,
                 Self::Value { pValue: o.cast() },
             ),
         }
