@@ -14,14 +14,14 @@ impl<'a> Range<'a> {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => m.into(),
         };
-        let id = nvtx_sys::nvtxDomainRangeStartEx(domain.handle, &arg.encode());
+        let id = nvtx_sys::domain_range_start_ex(domain.handle, &arg.encode());
         Range { id, domain }
     }
 }
 
 impl<'a> Drop for Range<'a> {
     fn drop(&mut self) {
-        nvtx_sys::nvtxDomainRangeEnd(self.domain.handle, self.id)
+        nvtx_sys::domain_range_end(self.domain.handle, self.id)
     }
 }
 

@@ -53,8 +53,8 @@ impl Domain {
     pub fn new(name: impl Into<Str>) -> Self {
         Domain {
             handle: match &name.into() {
-                Str::Ascii(s) => nvtx_sys::nvtxDomainCreateA(s),
-                Str::Unicode(s) => nvtx_sys::nvtxDomainCreateW(s),
+                Str::Ascii(s) => nvtx_sys::domain_create_ascii(s),
+                Str::Unicode(s) => nvtx_sys::domain_create_unicode(s),
             },
             registered_categories: AtomicU32::new(0),
         }
@@ -90,8 +90,8 @@ impl Domain {
     /// ```
     pub fn register_string(&self, string: impl Into<Str>) -> RegisteredString<'_> {
         let handle = match &string.into() {
-            Str::Ascii(s) => nvtx_sys::nvtxDomainRegisterStringA(self.handle, s),
-            Str::Unicode(s) => nvtx_sys::nvtxDomainRegisterStringW(self.handle, s),
+            Str::Ascii(s) => nvtx_sys::domain_register_string_ascii(self.handle, s),
+            Str::Unicode(s) => nvtx_sys::domain_register_string_unicode(self.handle, s),
         };
         RegisteredString {
             handle,
@@ -131,8 +131,8 @@ impl Domain {
     pub fn register_category(&self, name: impl Into<Str>) -> Category<'_> {
         let id = 1 + self.registered_categories.fetch_add(1, Ordering::SeqCst);
         match &name.into() {
-            Str::Ascii(s) => nvtx_sys::nvtxDomainNameCategoryA(self.handle, id, s),
-            Str::Unicode(s) => nvtx_sys::nvtxDomainNameCategoryW(self.handle, id, s),
+            Str::Ascii(s) => nvtx_sys::domain_name_category_ascii(self.handle, id, s),
+            Str::Unicode(s) => nvtx_sys::domain_name_category_unicode(self.handle, id, s),
         }
         Category { id, domain: self }
     }
@@ -177,7 +177,7 @@ impl Domain {
             EventArgument::Message(m) => m.into(),
         };
         let encoded = attribute.encode();
-        nvtx_sys::nvtxDomainMarkEx(self.handle, &encoded)
+        nvtx_sys::domain_mark_ex(self.handle, &encoded)
     }
 
     /// Create an RAII-friendly, domain-owned range type which (1) cannot be moved across thread boundaries and (2) automatically ended when dropped. Panics on drop() if the opening level doesn't match the closing level (since it must model a perfect stack).
@@ -253,7 +253,7 @@ impl Domain {
             message: msg_value,
         };
         Resource {
-            handle: nvtx_sys::nvtxDomainResourceCreate(self.handle, attrs),
+            handle: nvtx_sys::domain_resource_create(self.handle, attrs),
             _lifetime: PhantomData,
         }
     }
@@ -268,7 +268,7 @@ impl Domain {
             messageType: msg_type as i32,
             message: msg_value,
         };
-        let handle = nvtx_sys::nvtxDomainSyncUserCreate(self.handle, attrs);
+        let handle = nvtx_sys::domain_syncuser_create(self.handle, attrs);
         sync::UserSync {
             handle,
             _lifetime: PhantomData,
@@ -278,7 +278,7 @@ impl Domain {
 
 impl Drop for Domain {
     fn drop(&mut self) {
-        nvtx_sys::nvtxDomainDestroy(self.handle)
+        nvtx_sys::domain_destroy(self.handle)
     }
 }
 

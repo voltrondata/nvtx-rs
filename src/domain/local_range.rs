@@ -16,7 +16,7 @@ impl<'a> LocalRange<'a> {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => domain.event_attributes_builder().message(m).build(),
         };
-        nvtx_sys::nvtxDomainRangePushEx(domain.handle, &arg.encode());
+        nvtx_sys::domain_range_push_ex(domain.handle, &arg.encode());
         LocalRange {
             domain,
             _phantom: PhantomData,
@@ -26,6 +26,6 @@ impl<'a> LocalRange<'a> {
 
 impl<'a> Drop for LocalRange<'a> {
     fn drop(&mut self) {
-        nvtx_sys::nvtxDomainRangePop(self.domain.handle);
+        nvtx_sys::domain_range_pop(self.domain.handle);
     }
 }
