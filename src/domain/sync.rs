@@ -17,14 +17,14 @@ impl<'a> UserSync<'a> {
     /// ```
     #[must_use = "Dropping the return will violate the state machine"]
     pub fn acquire(self) -> UserSyncAcquireStart<'a> {
-        nvtx_sys::nvtxDomainSyncUserAcquireStart(self.handle);
+        nvtx_sys::domain_syncuser_acquire_start(self.handle);
         UserSyncAcquireStart { sync_object: self }
     }
 }
 
 impl<'a> Drop for UserSync<'a> {
     fn drop(&mut self) {
-        nvtx_sys::nvtxDomainSyncUserDestroy(self.handle)
+        nvtx_sys::domain_syncuser_destroy(self.handle)
     }
 }
 
@@ -46,7 +46,7 @@ impl<'a> UserSyncAcquireStart<'a> {
     /// ```
     #[must_use = "Dropping the return will result in the Synchronization Object being destroyed"]
     pub fn failed(self) -> UserSync<'a> {
-        nvtx_sys::nvtxDomainSyncUserAcquireFailed(self.sync_object.handle);
+        nvtx_sys::domain_syncuser_acquire_failed(self.sync_object.handle);
         self.sync_object
     }
 
@@ -62,7 +62,7 @@ impl<'a> UserSyncAcquireStart<'a> {
     /// ```
     #[must_use = "Dropping the return will violate the state machine"]
     pub fn success(self) -> UserSyncSuccess<'a> {
-        nvtx_sys::nvtxDomainSyncUserAcquireSuccess(self.sync_object.handle);
+        nvtx_sys::domain_syncuser_acquire_success(self.sync_object.handle);
         UserSyncSuccess {
             sync_object: self.sync_object,
         }
@@ -89,7 +89,7 @@ impl<'a> UserSyncSuccess<'a> {
     /// ```
     #[must_use = "Dropping the return will result in the Synchronization Object being destroyed"]
     pub fn release(self) -> UserSync<'a> {
-        nvtx_sys::nvtxDomainSyncUserReleasing(self.sync_object.handle);
+        nvtx_sys::domain_syncuser_acquire_releasing(self.sync_object.handle);
         self.sync_object
     }
 }

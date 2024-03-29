@@ -36,7 +36,7 @@ pub enum Identifier {
 
 impl TypeValueEncodable for Identifier {
     type Type = u32;
-    type Value = nvtx_sys::ResourceAttributesId;
+    type Value = nvtx_sys::ResourceAttributesIdentifier;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
         match self {
@@ -52,7 +52,7 @@ impl TypeValueEncodable for Identifier {
 
     fn default_encoding() -> (Self::Type, Self::Value) {
         (
-            nvtx_sys::resource_type::NVTX_RESOURCE_TYPE_UNKNOWN,
+            nvtx_sys::resource_type::UNKNOWN,
             Self::Value { ullValue: 0 },
         )
     }

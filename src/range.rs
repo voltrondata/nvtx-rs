@@ -26,10 +26,10 @@ impl Range {
     pub fn new(arg: impl Into<EventArgument>) -> Range {
         let id = match arg.into() {
             EventArgument::Message(m) => match &m {
-                Message::Ascii(s) => nvtx_sys::nvtxRangeStartA(s),
-                Message::Unicode(s) => nvtx_sys::nvtxRangeStartW(s),
+                Message::Ascii(s) => nvtx_sys::range_start_ascii(s),
+                Message::Unicode(s) => nvtx_sys::range_start_unicode(s),
             },
-            EventArgument::Attributes(a) => nvtx_sys::nvtxRangeStartEx(&a.encode()),
+            EventArgument::Attributes(a) => nvtx_sys::range_start_ex(&a.encode()),
         };
         Range { id }
     }
@@ -37,7 +37,7 @@ impl Range {
 
 impl Drop for Range {
     fn drop(&mut self) {
-        nvtx_sys::nvtxRangeEnd(self.id)
+        nvtx_sys::range_end(self.id)
     }
 }
 

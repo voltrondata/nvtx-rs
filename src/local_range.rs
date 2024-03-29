@@ -28,10 +28,10 @@ impl LocalRange {
     pub fn new(arg: impl Into<EventArgument>) -> LocalRange {
         match arg.into() {
             EventArgument::Message(m) => match &m {
-                Message::Ascii(s) => nvtx_sys::nvtxRangePushA(s),
-                Message::Unicode(s) => nvtx_sys::nvtxRangePushW(s),
+                Message::Ascii(s) => nvtx_sys::range_push_ascii(s),
+                Message::Unicode(s) => nvtx_sys::range_push_unicode(s),
             },
-            EventArgument::Attributes(a) => nvtx_sys::nvtxRangePushEx(&a.encode()),
+            EventArgument::Attributes(a) => nvtx_sys::range_push_ex(&a.encode()),
         };
         LocalRange {
             _phantom: PhantomData,
@@ -41,6 +41,6 @@ impl LocalRange {
 
 impl Drop for LocalRange {
     fn drop(&mut self) {
-        nvtx_sys::nvtxRangePop();
+        nvtx_sys::range_pop();
     }
 }

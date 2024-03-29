@@ -21,25 +21,24 @@ impl From<GenericIdentifier> for Identifier {
 
 impl TypeValueEncodable for GenericIdentifier {
     type Type = u32;
-    type Value = nvtx_sys::ResourceAttributesId;
+    type Value = nvtx_sys::ResourceAttributesIdentifier;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        use nvtx_sys::resource_type::*;
         match self {
             Self::Pointer(p) => (
-                NVTX_RESOURCE_TYPE_GENERIC_POINTER,
+                nvtx_sys::resource_type::GENERIC_POINTER,
                 Self::Value { pValue: *p },
             ),
             Self::Handle(h) => (
-                NVTX_RESOURCE_TYPE_GENERIC_HANDLE,
+                nvtx_sys::resource_type::GENERIC_HANDLE,
                 Self::Value { ullValue: *h },
             ),
             Self::NativeThread(t) => (
-                NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE,
+                nvtx_sys::resource_type::GENERIC_THREAD_NATIVE,
                 Self::Value { ullValue: *t },
             ),
             Self::PosixThread(t) => (
-                NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX,
+                nvtx_sys::resource_type::GENERIC_THREAD_POSIX,
                 Self::Value { ullValue: *t },
             ),
         }

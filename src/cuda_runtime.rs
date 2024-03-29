@@ -38,16 +38,16 @@ impl From<nvtx_sys::CudaStream> for CudaRuntimeResource {
 pub fn name_cudart_resource(resource: impl Into<CudaRuntimeResource>, name: impl Into<Str>) {
     match resource.into() {
         CudaRuntimeResource::Device(device) => match &name.into() {
-            Str::Ascii(s) => nvtx_sys::nvtxNameCudaDeviceA(device, s),
-            Str::Unicode(s) => nvtx_sys::nvtxNameCudaDeviceW(device, s),
+            Str::Ascii(s) => nvtx_sys::name_cuda_device_ascii(device, s),
+            Str::Unicode(s) => nvtx_sys::name_cuda_device_unicode(device, s),
         },
         CudaRuntimeResource::Event(event) => match &name.into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::nvtxNameCudaEventA(event, s) },
-            Str::Unicode(s) => unsafe { nvtx_sys::nvtxNameCudaEventW(event, s) },
+            Str::Ascii(s) => unsafe { nvtx_sys::name_cuda_event_ascii(event, s) },
+            Str::Unicode(s) => unsafe { nvtx_sys::name_cuda_event_unicode(event, s) },
         },
         CudaRuntimeResource::Stream(stream) => match &name.into() {
-            Str::Ascii(s) => unsafe { nvtx_sys::nvtxNameCudaStreamA(stream, s) },
-            Str::Unicode(s) => unsafe { nvtx_sys::nvtxNameCudaStreamW(stream, s) },
+            Str::Ascii(s) => unsafe { nvtx_sys::name_cuda_stream_ascii(stream, s) },
+            Str::Unicode(s) => unsafe { nvtx_sys::name_cuda_stream_unicode(stream, s) },
         },
     }
 }
