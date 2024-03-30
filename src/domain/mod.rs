@@ -35,7 +35,7 @@ pub use self::identifier::CudaRuntimeIdentifier;
 #[cfg(target_family = "unix")]
 pub use self::identifier::PThreadIdentifier;
 
-/// Represents a domain for high-level grouping
+/// Represents a domain for high-level grouping within NSight profilers.
 #[derive(Debug)]
 pub struct Domain {
     handle: nvtx_sys::DomainHandle,
@@ -43,9 +43,9 @@ pub struct Domain {
 }
 
 impl Domain {
-    /// Register a NVTX domain
+    /// Register a NVTX domain.
     ///
-    /// See [`Str`] for valid conversions
+    /// See [`Str`] for valid conversions.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -60,7 +60,7 @@ impl Domain {
         }
     }
 
-    /// Gets a new builder instance for event attribute construction in the current domain
+    /// Gets a new builder instance for event attributes in the current domain.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -77,11 +77,11 @@ impl Domain {
         }
     }
 
-    /// Registers an immutable string within the current domain
+    /// Registers an immutable string within the current domain.
     ///
-    /// Returns a handle to the immutable string registered to nvtx.
+    /// Returns a handle to the immutable string registered to NVTX.
     ///
-    /// See [`Str`] for valid conversions
+    /// See [`Str`] for valid conversions.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -99,11 +99,11 @@ impl Domain {
         }
     }
 
-    /// Register many immutable strings within the current domain
+    /// Register many immutable strings within the current domain.
     ///
-    /// Returns an array of handles to the immutable strings registered to nvtx.
+    /// Returns an array of handles to the immutable strings registered to NVTX.
     ///
-    /// See [`Str`] for valid conversions
+    /// See [`Str`] for valid conversions.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -117,11 +117,11 @@ impl Domain {
         strings.map(|string| self.register_string(string))
     }
 
-    /// Register a new category within the domain. Categories are used to group sets of events.
+    /// Register a new category within the domain.
     ///
-    /// Returns a handle to the category registered to nvtx.
+    /// Returns a handle to the category registered to NVTX.
     ///
-    /// See [`Str`] for valid conversions
+    /// See [`Str`] for valid conversions.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -137,11 +137,11 @@ impl Domain {
         Category { id, domain: self }
     }
 
-    /// Register new categories within the domain. Categories are used to group sets of events.
+    /// Register new categories within the domain.
     ///
-    /// Returns an array of handles to the categories registered to nvtx.
+    /// Returns an array of handles to the categories registered to NVTX.
     ///
-    /// See [`Str`] for valid conversions
+    /// See [`Str`] for valid conversions.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -157,7 +157,9 @@ impl Domain {
 
     /// Marks an instantaneous event in the application belonging to a domain.
     ///
-    /// A marker can contain a text message or specify additional information using the event attributes structure. These attributes include a text message, color, category, and a payload. Each of the attributes is optional.
+    /// A marker can contain a text message or specify information using the event
+    /// attributes structure. These attributes include a text message, color, category,
+    /// and a payload. Each of the attributes is optional.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -166,7 +168,11 @@ impl Domain {
     ///
     /// domain.mark(c"Another example");
     ///
-    /// domain.mark(domain.event_attributes_builder().message("Interesting example").color([255, 0, 0]).build());
+    /// domain.mark(
+    ///   domain.event_attributes_builder()
+    ///     .message("Interesting example")
+    ///     .color([255, 0, 0])
+    ///     .build());
     ///
     /// let reg_str = domain.register_string("Registered String");
     /// domain.mark(&reg_str);
@@ -180,7 +186,8 @@ impl Domain {
         nvtx_sys::domain_mark_ex(self.handle, &encoded)
     }
 
-    /// Create an RAII-friendly, domain-owned range type which (1) cannot be moved across thread boundaries and (2) automatically ended when dropped. Panics on drop() if the opening level doesn't match the closing level (since it must model a perfect stack).
+    /// Create an RAII-friendly, domain-owned range type which (1) cannot be moved across
+    /// thread boundaries and (2) automatically ended when dropped.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -192,7 +199,11 @@ impl Domain {
     /// let range = domain.local_range(c"simple name");
     ///
     /// // creation from EventAttributes
-    /// let attr = domain.event_attributes_builder().payload(1).message("complex range").build();
+    /// let attr = domain
+    ///     .event_attributes_builder()
+    ///     .payload(1)
+    ///     .message("complex range")
+    ///     .build();
     /// let range = domain.local_range(attr);
     ///
     /// // explicitly end a range
@@ -202,7 +213,8 @@ impl Domain {
         LocalRange::new(arg, self)
     }
 
-    /// Create an RAII-friendly, domain-owned range type which (1) can be moved across thread boundaries and (2) automatically ended when dropped
+    /// Create an RAII-friendly, domain-owned range type which (1) can be moved across
+    /// thread boundaries and (2) automatically ended when dropped.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -214,7 +226,11 @@ impl Domain {
     /// let range = domain.range(c"simple name");
     ///
     /// // creation from EventAttributes
-    /// let attr = domain.event_attributes_builder().payload(1).message("complex range").build();
+    /// let attr = domain
+    ///     .event_attributes_builder()
+    ///     .payload(1)
+    ///     .message("complex range")
+    ///     .build();
     /// let range = domain.range(attr);
     ///
     /// // explicitly end a range
@@ -243,7 +259,9 @@ impl Domain {
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
     /// let pthread_id = 13854;
-    /// domain.name_resource(nvtx::domain::GenericIdentifier::PosixThread(pthread_id), "My custom name");
+    /// domain.name_resource(
+    ///     nvtx::domain::GenericIdentifier::PosixThread(pthread_id),
+    ///     "My custom name");
     /// #[cfg(feature = "cuda")]
     /// domain.name_resource(nvtx::domain::CudaIdentifier::Device(0), "My device");
     /// #[cfg(feature = "cuda_runtime")]
@@ -272,7 +290,8 @@ impl Domain {
         }
     }
 
-    /// Create a user defined synchronization object This is used to track non-OS synchronization working with spinlocks and atomics.
+    /// Create a user defined synchronization object This is used to track non-OS
+    /// synchronization working with spinlocks and atomics.
     pub fn user_sync<'a>(&'a self, name: impl Into<Message<'a>>) -> sync::UserSync<'a> {
         let message = name.into();
         let (msg_type, msg_value) = message.encode();

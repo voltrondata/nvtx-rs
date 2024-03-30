@@ -1,6 +1,6 @@
 use crate::Str;
 
-/// Enum for all CUDA types
+/// Enum for all CUDA types.
 pub enum CudaResource {
     /// CuDevice
     Device(nvtx_sys::CuDevice),
@@ -36,7 +36,7 @@ impl From<nvtx_sys::CuStream> for CudaResource {
     }
 }
 
-/// Name a CUDA Resource (one of: Device, Context, Event, or Stream)
+/// Name a CUDA Resource (one of: Device, Context, Event, or Stream).
 ///
 /// ```
 /// nvtx::name_cuda_resource(nvtx::CudaResource::Device(0), "GPU 0");

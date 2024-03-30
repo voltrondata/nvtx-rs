@@ -22,6 +22,7 @@ fn main() {
         .header("c/include/wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .allowlist_recursively(false)
+        .generate_comments(false)
         .generate_cstr(true)
         .default_alias_style(bindgen::AliasVariation::TypeAlias)
         .default_enum_style(bindgen::EnumVariation::Rust {

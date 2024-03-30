@@ -1,6 +1,6 @@
 use crate::{EventAttributes, Message};
 
-/// Convenience wrapper for all valid argument types to ranges and marks
+/// Convenience wrapper for all valid argument types to ranges and marks.
 ///
 /// * Any string type will be translated to [`EventArgument::Message`].
 /// * If [`EventArgument::Attributes`] is the active discriminator:

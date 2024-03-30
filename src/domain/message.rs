@@ -7,7 +7,7 @@ use widestring::WideCString;
 ///
 /// * [`Message::Ascii`] is the discriminator for ASCII C strings
 /// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings
-/// * [`Message::Registered`] is the discriminator for nvtx domain-registered strings
+/// * [`Message::Registered`] is the discriminator for NVTX domain-registered strings
 #[derive(Debug, Clone)]
 pub enum Message<'a> {
     /// discriminator for an owned ASCII string

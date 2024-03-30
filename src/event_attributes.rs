@@ -1,6 +1,6 @@
 use crate::{Category, Color, Message, Payload, TypeValueEncodable};
 
-/// All attributes that are associated with marks and ranges
+/// All attributes that are associated with marks and ranges.
 #[derive(Debug, Clone)]
 pub struct EventAttributes {
     pub(super) category: Option<Category>,
@@ -55,7 +55,7 @@ impl<T: Into<Message>> From<T> for EventAttributes {
     }
 }
 
-/// Builder to facilitate easier construction of [`EventAttributes`]
+/// Builder to facilitate easier construction of [`EventAttributes`].
 ///
 /// ```
 /// let cat = nvtx::Category::new("Category1");
@@ -125,7 +125,7 @@ impl<'a> EventAttributesBuilder<'a> {
         self
     }
 
-    /// Construct an [`EventAttributes`] from the builder's held state
+    /// Construct an [`EventAttributes`] from the builder's held state.
     ///
     /// ```
     /// let cat = nvtx::Category::new("Category1");

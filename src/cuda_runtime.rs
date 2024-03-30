@@ -1,6 +1,6 @@
 use crate::Str;
 
-/// Enum for all CUDA Runtime types
+/// Enum for all CUDA Runtime types.
 pub enum CudaRuntimeResource {
     /// device (integer)
     Device(i32),
@@ -28,7 +28,7 @@ impl From<nvtx_sys::CudaStream> for CudaRuntimeResource {
     }
 }
 
-/// Name a CUDA Runtime Resource (one of: Device, Event, or Stream)
+/// Name a CUDA Runtime Resource (one of: Device, Event, or Stream).
 ///
 /// ```
 /// nvtx::name_cudart_resource(nvtx::CudaRuntimeResource::Device(0), "GPU 0");

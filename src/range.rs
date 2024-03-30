@@ -1,13 +1,14 @@
 use crate::{EventArgument, Message};
 
-/// A RAII-like object for modeling process-wide Ranges
+/// A RAII-like object for modeling process-wide Ranges.
 #[derive(Debug)]
 pub struct Range {
     id: nvtx_sys::RangeId,
 }
 
 impl Range {
-    /// Create an RAII-friendly range type which (1) can be moved across thread boundaries and (2) automatically ended when dropped
+    /// Create an RAII-friendly range type which (1) can be moved across thread
+    /// boundaries and (2) automatically ended when dropped.
     ///
     /// ```
     /// // creation from a unicode string
@@ -17,7 +18,10 @@ impl Range {
     /// let range = nvtx::Range::new(c"simple name");
     ///
     /// // creation from EventAttributes
-    /// let attr = nvtx::EventAttributesBuilder::default().payload(1).message("complex range").build();
+    /// let attr = nvtx::EventAttributesBuilder::default()
+    ///     .payload(1)
+    ///     .message("complex range")
+    ///     .build();
     /// let range = nvtx::Range::new(attr);
     ///
     /// // explicitly end a range

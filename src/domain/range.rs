@@ -1,7 +1,7 @@
 use super::EventArgument;
 use crate::Domain;
 
-/// A RAII-like object for modeling process-wide Ranges within a Domain
+/// A RAII-like object for modeling process-wide Ranges within a Domain.
 #[derive(Debug)]
 pub struct Range<'a> {
     pub(super) id: nvtx_sys::RangeId,

@@ -1,6 +1,7 @@
 use crate::TypeValueEncodable;
 
-/// Represents a payload value for use within [`crate::EventAttributes`] and [`crate::domain::EventAttributes`]
+/// Represents a payload value for use within [`crate::EventAttributes`] and
+/// [`crate::domain::EventAttributes`].
 ///
 /// * [`Payload::Float`] holds a 32-bit floating-point playload
 /// * [`Payload::Double`] holds a 64-bit floating-point playload

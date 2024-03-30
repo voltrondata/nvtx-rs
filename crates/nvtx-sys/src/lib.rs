@@ -154,74 +154,102 @@ pub fn mark_unicode(message: &WideCStr) {
 
 #[must_use]
 /// Start a process-visible range within a domain with an attributes structure.
+///
+/// To close the range, see [`domain_range_end`].
 pub fn domain_range_start_ex(domain: DomainHandle, eventAttrib: &EventAttributes) -> RangeId {
     unsafe { crate::ffi::nvtxDomainRangeStartEx(domain.handle, eventAttrib) }
 }
 
 #[must_use]
 /// Start a process-visible range with an attributes structure.
+///
+/// To close the range, see [`range_end`].
 pub fn range_start_ex(eventAttrib: &EventAttributes) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartEx(eventAttrib) }
 }
 
 #[must_use]
 /// Start a process-visible range with an ASCII string.
+///
+/// To close the range, see [`range_end`].
 pub fn range_start_ascii(message: &CStr) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartA(message.as_ptr()) }
 }
 
 #[must_use]
 /// Start a process-visible range with a Unicde string.
+///
+/// To close the range, see [`range_end`].
 pub fn range_start_unicode(message: &WideCStr) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartW(message.as_ptr().cast()) }
 }
 
 /// End a process-visible range within a domain.
 ///
-/// The range id is created by [`crate::nvtxDomainRangeStartEx`].
+/// The range id is created by [`domain_range_start_ex`]
 pub fn domain_range_end(domain: DomainHandle, id: RangeId) {
     unsafe { crate::ffi::nvtxDomainRangeEnd(domain.handle, id) }
 }
 
 /// End a process-visible range.
 ///
-/// The range id is created by [`crate::nvtxRangeStartA`] or [`crate::nvtxRangeStartW`] or [`crate::nvtxRangeStartEx`].
+/// The range id is created by one of:
+/// * [`range_start_ascii`]
+/// * [`range_start_unicode`]
+/// * [`range_start_ex`]
 pub fn range_end(id: RangeId) {
     unsafe { crate::ffi::nvtxRangeEnd(id) }
 }
 
 /// Start a thread-visible range within a domain with an attributes structure.
+///
+/// To close, see [`domain_range_pop`].
 pub fn domain_range_push_ex(domain: DomainHandle, eventAttrib: &EventAttributes) -> i32 {
     unsafe { crate::ffi::nvtxDomainRangePushEx(domain.handle, eventAttrib) }
 }
 
 /// Start a thread-visible range with an attributes structure.
+///
+/// To close, see [`range_pop`].
 pub fn range_push_ex(eventAttrib: &EventAttributes) -> i32 {
     unsafe { crate::ffi::nvtxRangePushEx(eventAttrib) }
 }
 
 /// Start a thread-visible range with an ASCII string.
+///
+/// To close, see [`range_pop`].
 pub fn range_push_ascii(message: &CStr) -> i32 {
     unsafe { crate::ffi::nvtxRangePushA(message.as_ptr()) }
 }
 
 /// Start a thread-visible range with a Unicode string.
+///
+/// To close, see [`range_pop`].
 pub fn range_push_unicode(message: &WideCStr) -> i32 {
     unsafe { crate::ffi::nvtxRangePushW(message.as_ptr().cast()) }
 }
 
 /// End a thread-visible range within a domain.
+///
+/// The range would have been created via [`domain_range_push_ex`].
 pub fn domain_range_pop(domain: DomainHandle) -> i32 {
     unsafe { crate::ffi::nvtxDomainRangePop(domain.handle) }
 }
 
 /// End a thread-visible range.
+///
+/// The range would have been created via one of:
+/// * [`range_push_ascii`]
+/// * [`range_push_unicode`]
+/// * [`range_push_ex`]
 pub fn range_pop() -> i32 {
     unsafe { crate::ffi::nvtxRangePop() }
 }
 
 #[must_use]
 /// Create a named resource within a domain.
+///
+/// To destroy the resource, see [`domain_resource_destroy`].
 pub fn domain_resource_create(domain: DomainHandle, attribs: ResourceAttributes) -> ResourceHandle {
     ResourceHandle {
         handle: unsafe {
@@ -235,7 +263,7 @@ pub fn domain_resource_create(domain: DomainHandle, attribs: ResourceAttributes)
 
 /// Destroy a named resource.
 ///
-/// The named resource is created by [`crate::nvtxDomainResourceDestroy`].
+/// The named resource is created by [`domain_resource_create`].
 pub fn domain_resource_destroy(resource: ResourceHandle) {
     unsafe { crate::ffi::nvtxDomainResourceDestroy(resource.handle) }
 }
@@ -310,7 +338,7 @@ pub fn domain_create_unicode(name: &WideCStr) -> DomainHandle {
 
 /// Destroy a domain.
 ///
-/// The domain is created by [`crate::nvtxDomainCreateA`] or [`crate::nvtxDomainCreateW`]).
+/// The domain is created by [`domain_create_ascii`] or [`domain_create_unicode`].
 pub fn domain_destroy(domain: DomainHandle) {
     unsafe { crate::ffi::nvtxDomainDestroy(domain.handle) }
 }
@@ -444,7 +472,7 @@ pub fn domain_syncuser_create(domain: DomainHandle, attribs: SyncUserAttributes)
 
 /// Destroy a user-defined synchronization.
 ///
-/// Created by [`crate::nvtxDomainSyncUserCreate`].
+/// Created by [`domain_syncuser_create`].
 pub fn domain_syncuser_destroy(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserDestroy(handle.handle) }
 }
@@ -456,21 +484,21 @@ pub fn domain_syncuser_acquire_start(handle: SyncUserHandle) {
 
 /// Indicate that a user-defined synchronization acquisition failed.
 ///
-/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireStart`].
+/// Note: this call is only valid after a call to [`domain_syncuser_acquire_start`].
 pub fn domain_syncuser_acquire_failed(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserAcquireFailed(handle.handle) }
 }
 
 /// Indicate that a user-defined synchronization acquisition succeeded.
 ///
-/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireStart`].
+/// Note: this call is only valid after a call to [`domain_syncuser_acquire_start`].
 pub fn domain_syncuser_acquire_success(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserAcquireSuccess(handle.handle) }
 }
 
 /// Indicate that a user-defined synchronization is released.
 ///
-/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireSuccess`].
+/// Note: this call is only valid after a call to [`domain_syncuser_acquire_success`].
 pub fn domain_syncuser_acquire_releasing(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserReleasing(handle.handle) }
 }

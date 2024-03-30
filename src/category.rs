@@ -1,14 +1,19 @@
 use crate::Str;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-/// Represents a category for use with event and range grouping. See also: [`crate::register_category`], [`crate::register_categories`]
+/// Represents a category for use with event and range grouping.
+///
+/// Categories can be created via:
+/// * [`crate::register_category`]
+/// * [`crate::register_categories`]
+/// * [`Category::new`]
 #[derive(Debug, Clone, Copy)]
 pub struct Category {
     pub(super) id: u32,
 }
 
 impl Category {
-    /// Create a new category not affiliated with any domain
+    /// Create a new category not affiliated with any domain.
     ///
     /// See [`Str`] for valid conversions
     pub fn new(name: impl Into<Str>) -> Category {

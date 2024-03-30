@@ -2,7 +2,7 @@ use crate::{Str, TypeValueEncodable};
 use std::ffi::CString;
 use widestring::WideCString;
 
-/// Represents a message for use within events and ranges
+/// Represents a message for use within events and ranges.
 ///
 /// * [`Message::Ascii`] is the discriminator for ASCII C strings
 /// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings

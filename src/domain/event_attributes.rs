@@ -1,7 +1,7 @@
 use super::{Category, Message};
 use crate::{Color, Domain, Payload, TypeValueEncodable};
 
-/// All attributes that are associated with marks and ranges
+/// All attributes that are associated with marks and ranges.
 #[derive(Debug, Clone)]
 pub struct EventAttributes<'a> {
     pub(crate) category: Option<Category<'a>>,
@@ -56,7 +56,7 @@ impl<'a, T: Into<Message<'a>>> From<T> for EventAttributes<'a> {
     }
 }
 
-/// Builder to facilitate easier construction of [`EventAttributes`]
+/// Builder to facilitate easier construction of [`EventAttributes`].
 ///
 /// ```
 /// let cat = nvtx::Category::new("Category1");
@@ -78,7 +78,8 @@ pub struct EventAttributesBuilder<'a> {
 }
 
 impl<'a> EventAttributesBuilder<'a> {
-    /// Update the attribute's category. An assertion will be thrown if a Category is passed in whose domain is not the same as this builder
+    /// Update the attribute's category. An assertion will be thrown if a Category is
+    /// passed in whose domain is not the same as this builder.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -123,7 +124,9 @@ impl<'a> EventAttributesBuilder<'a> {
         self
     }
 
-    /// Update the attribute's message. An assertion will be thrown if a RegisteredString is passed in whose domain is not the same as this builder
+    /// Update the attribute's message. An assertion will be thrown if a
+    /// [`super::RegisteredString`] is passed in whose domain is not the same as this
+    /// builder.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
@@ -143,7 +146,7 @@ impl<'a> EventAttributesBuilder<'a> {
         self
     }
 
-    /// Construct an [`EventAttributes`] from the builder's held state
+    /// Construct an [`EventAttributes`] from the builder's held state.
     ///
     /// ```
     /// let domain = nvtx::Domain::new("Domain");
