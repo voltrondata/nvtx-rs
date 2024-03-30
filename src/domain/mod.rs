@@ -5,35 +5,40 @@ use std::{
 };
 
 mod category;
+pub use category::Category;
+
 mod event_argument;
+pub use event_argument::EventArgument;
+
 mod event_attributes;
+pub use event_attributes::{EventAttributes, EventAttributesBuilder};
+
 mod identifier;
-mod local_range;
-mod message;
-mod range;
-mod registered_string;
-mod resource;
-/// user-defined synchronization objects
-pub mod sync;
-
-pub use self::{
-    category::Category,
-    event_argument::EventArgument,
-    event_attributes::{EventAttributes, EventAttributesBuilder},
-    identifier::{GenericIdentifier, Identifier},
-    local_range::LocalRange,
-    message::Message,
-    range::Range,
-    registered_string::RegisteredString,
-    resource::Resource,
-};
-
 #[cfg(feature = "cuda")]
 pub use self::identifier::CudaIdentifier;
 #[cfg(feature = "cuda_runtime")]
 pub use self::identifier::CudaRuntimeIdentifier;
 #[cfg(target_family = "unix")]
 pub use self::identifier::PThreadIdentifier;
+pub use identifier::{GenericIdentifier, Identifier};
+
+mod local_range;
+pub use local_range::LocalRange;
+
+mod message;
+pub use message::Message;
+
+mod range;
+pub use range::Range;
+
+mod registered_string;
+pub use registered_string::RegisteredString;
+
+mod resource;
+pub use resource::Resource;
+
+/// user-defined synchronization objects
+pub mod sync;
 
 /// Represents a domain for high-level grouping within NSight profilers.
 #[derive(Debug)]
@@ -314,7 +319,3 @@ impl Drop for Domain {
         nvtx_sys::domain_destroy(self.handle)
     }
 }
-
-unsafe impl Send for Domain {}
-
-unsafe impl Sync for Domain {}

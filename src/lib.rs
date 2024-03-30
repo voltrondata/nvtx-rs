@@ -54,59 +54,75 @@
 //!   enables the naming of Pthread-specific entities such as mutexes, semaphores,
 //!   condition variables, and read-write-locks.
 
-/// color support
-pub mod color;
-
-/// specialized types for use within a domain context
-pub mod domain;
-
-/// platform native types
-pub mod native_types;
-
-#[cfg(feature = "tracing")]
-/// tracing support
-pub mod tracing;
-
 mod category;
-mod event_argument;
-mod event_attributes;
-mod local_range;
-mod message;
-mod payload;
-mod range;
-mod str;
+pub use category::Category;
 
-#[cfg(feature = "cuda")]
-mod cuda;
-#[cfg(feature = "cuda_runtime")]
-mod cuda_runtime;
-
-pub use crate::{
-    category::Category,
-    event_argument::EventArgument,
-    event_attributes::{EventAttributes, EventAttributesBuilder},
-    local_range::LocalRange,
-    message::Message,
-    payload::Payload,
-    range::Range,
-    str::Str,
-};
-
-/// Represents a domain for high-level grouping within NSight profilers.
-pub type Domain = domain::Domain;
-
+/// Support for colors.
+pub mod color;
 /// Represents a color in use for controlling appearance within NSight profilers.
 pub type Color = color::Color;
 
 #[cfg(feature = "cuda")]
+/// Support for CUDA-related APIs.
+mod cuda;
+#[cfg(feature = "cuda")]
 pub use cuda::*;
+
+#[cfg(feature = "cuda_runtime")]
+/// Support for CUDA runtime related APIs.
+mod cuda_runtime;
 #[cfg(feature = "cuda_runtime")]
 pub use cuda_runtime::*;
 
+/// Specialized types for use within a domain context.
+pub mod domain;
+/// Represents a domain for high-level grouping within NSight profilers.
+pub type Domain = domain::Domain;
+
+/// Internal type used for efficient dispatch
+mod event_argument;
+pub use event_argument::EventArgument;
+
+/// Support for constructing detailed annotations for Ranges and Marks.
+mod event_attributes;
+pub use event_attributes::{EventAttributes, EventAttributesBuilder};
+
+/// Support for thread-local ranges.
+mod local_range;
+pub use local_range::LocalRange;
+
+/// Support for ASCII and Unicode strings.
+mod message;
+pub use message::Message;
+
+/// Platform-native types.
+pub mod native_types;
+
+/// Support for payload information for Ranges and Marks.
+mod payload;
+pub use payload::Payload;
+
+/// Support for process-wide ranges.
+mod range;
+pub use range::Range;
+
+/// Support for transparent string types (ASCII or Unicode).
+mod str;
+pub use str::Str;
+
+#[cfg(feature = "tracing")]
+/// Support for tracing.
+pub mod tracing;
+
+/// Trait used to encode a type to a struct type and value.
 trait TypeValueEncodable {
     type Type;
     type Value;
+
+    /// Analyze the current state and yield a type-value tuple.
     fn encode(&self) -> (Self::Type, Self::Value);
+
+    /// Yield a default type-value tuple.
     fn default_encoding() -> (Self::Type, Self::Value);
 }
 

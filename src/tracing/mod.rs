@@ -19,7 +19,8 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 ///
 /// **Supported fields**
 /// * `message` (`&str`) for Marks only -- the span name is used as the message for Spans
-/// * `color` (`&str`)
+/// * `color` (`&str`) -- the valid names align the names provided by the color names
+///   defined within [`crate::color`]
 /// * `payload` (one of: `f64`, `u64`, `i64`)
 /// * `category` (`u32`) provides a numerical category
 ///
@@ -58,19 +59,20 @@ pub struct NvtxLayer {
 }
 
 impl NvtxLayer {
-    /// Create a new layer with a given domain name
+    /// Create a new layer with a given domain name.
     pub fn new(name: impl Into<Str>) -> NvtxLayer {
         NvtxLayer {
             domain: Domain::new(name),
         }
     }
 
-    /// Get the layer's domain
+    /// Get the layer's domain.
     pub fn get_domain(&self) -> &Domain {
         &self.domain
     }
 }
 
+/// Data modeling [`EventAttributes`] without the need for lifetime management.
 #[derive(Debug, Clone, Default)]
 struct NvtxData {
     message: Option<String>,
@@ -79,6 +81,7 @@ struct NvtxData {
     payload: Option<Payload>,
 }
 
+/// Wrapper around NVTX Range ids for span extension storage.
 struct NvtxId(u64);
 
 impl<S> Layer<S> for NvtxLayer
@@ -121,9 +124,8 @@ where
     }
 
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
-        let mut attr: Option<EventAttributes> = None;
         if let Some(data) = ctx.span(id).unwrap().extensions().get::<NvtxData>() {
-            attr = Some(EventAttributes {
+            let attr = EventAttributes {
                 message: data.message.as_ref().map(|s| Message::from(s.clone())),
                 category: data.category.map(|c| Category {
                     id: c,
@@ -131,13 +133,11 @@ where
                 }),
                 color: data.color,
                 payload: data.payload,
-            });
-        }
-        if let Some(a) = attr {
+            };
             ctx.span(id)
                 .unwrap()
                 .extensions_mut()
-                .insert(NvtxId(self.domain.range_start(a)));
+                .insert(NvtxId(self.domain.range_start(attr)));
         }
     }
 
@@ -162,6 +162,7 @@ impl<'a, S> NvtxVisitor<'a, S>
 where
     S: tracing::Subscriber + for<'lookup> LookupSpan<'lookup>,
 {
+    /// Create a new NvtxVisitor given a mutable data reference.
     fn new(data: &'a mut NvtxData) -> NvtxVisitor<'a, S> {
         NvtxVisitor {
             data,

@@ -22,7 +22,3 @@ impl<'a> Drop for Range<'a> {
         self.domain.range_end(self.id);
     }
 }
-
-unsafe impl<'a> Send for Range<'a> {}
-
-unsafe impl<'a> Sync for Range<'a> {}

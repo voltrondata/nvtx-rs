@@ -44,7 +44,3 @@ impl Drop for Range {
         nvtx_sys::range_end(self.id)
     }
 }
-
-unsafe impl Send for Range {}
-
-unsafe impl Sync for Range {}

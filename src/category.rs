@@ -1,7 +1,7 @@
 use crate::Str;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-/// Represents a category for use with event and range grouping.
+/// Represents a category for use with mark and range grouping.
 ///
 /// Categories can be created via:
 /// * [`crate::register_category`]
