@@ -50,7 +50,7 @@
 //! ## Platform-specific types
 //!
 //! * **PThread Resource Naming** -
-//!   `PthreadIdentifier` is added to the [`domain`] module on UNIX-like platforms. This
+//!   `PThreadIdentifier` is added to the [`domain`] module on UNIX-like platforms. This
 //!   enables the naming of Pthread-specific entities such as mutexes, semaphores,
 //!   condition variables, and read-write-locks.
 
@@ -108,7 +108,7 @@ pub use range::Range;
 
 /// Support for transparent string types (ASCII or Unicode).
 mod str;
-pub use str::Str;
+pub use crate::str::Str;
 
 #[cfg(feature = "tracing")]
 /// Support for tracing.

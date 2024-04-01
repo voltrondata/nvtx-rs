@@ -10,11 +10,11 @@ use widestring::WideCString;
 /// * [`Message::Registered`] is the discriminator for NVTX domain-registered strings
 #[derive(Debug, Clone)]
 pub enum Message<'a> {
-    /// discriminator for an owned ASCII string
+    /// An owned ASCII string.
     Ascii(CString),
-    /// discriminator for an owned Unicode string
+    /// An owned Unicode string.
     Unicode(WideCString),
-    /// discriminator for a registered string belonging to a domain
+    /// A registered string handle belonging to a domain.
     Registered(&'a RegisteredString<'a>),
 }
 

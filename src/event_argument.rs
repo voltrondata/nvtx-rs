@@ -4,13 +4,13 @@ use crate::{EventAttributes, Message};
 ///
 /// * Any string type will be translated to [`EventArgument::Message`].
 /// * If [`EventArgument::Attributes`] is the active discriminator:
-///   - Then if its held [`EventAttributes`] only specifies a message, then it's Message will be used
+///   - If its [`EventAttributes`] only specifies a message, then message will be used.
 ///   - Otherwise, the existing [`EventAttributes`] will be used for the event.
 #[derive(Debug, Clone)]
 pub enum EventArgument {
-    /// discriminator for a Message
+    /// holds a Message
     Message(Message),
-    /// discriminator for an EventAttributes
+    /// holds an EventAttributes
     Attributes(EventAttributes),
 }
 
