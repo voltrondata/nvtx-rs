@@ -8,9 +8,9 @@ use super::{EventAttributes, Message};
 ///   - Otherwise, the existing [`EventAttributes`] will be used for the event.
 #[derive(Debug, Clone)]
 pub enum EventArgument<'a> {
-    /// holds a Message
+    /// Holds a Message.
     Message(Message<'a>),
-    /// holds an EventAttributes
+    /// Holds an EventAttributes.
     Attributes(EventAttributes<'a>),
 }
 

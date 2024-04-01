@@ -54,7 +54,7 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 /// });
 /// ```
 pub struct NvtxLayer {
-    /// the domain to use
+    /// The held domain of the layer.
     domain: crate::Domain,
 }
 

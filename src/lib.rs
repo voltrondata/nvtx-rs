@@ -145,10 +145,8 @@ trait TypeValueEncodable {
 /// ```
 pub fn mark(argument: impl Into<EventArgument>) {
     match argument.into() {
-        EventArgument::Message(m) => match &m {
-            Message::Ascii(s) => nvtx_sys::mark_ascii(s),
-            Message::Unicode(s) => nvtx_sys::mark_unicode(s),
-        },
+        EventArgument::Message(Message::Ascii(s)) => nvtx_sys::mark_ascii(&s),
+        EventArgument::Message(Message::Unicode(s)) => nvtx_sys::mark_unicode(&s),
         EventArgument::Attributes(a) => nvtx_sys::mark_ex(&a.encode()),
     }
 }
@@ -168,9 +166,9 @@ pub fn mark(argument: impl Into<EventArgument>) {
 /// nvtx::name_thread(12345, "My custom name");
 /// ```
 pub fn name_thread(native_tid: u32, name: impl Into<Str>) {
-    match &name.into() {
-        Str::Ascii(s) => nvtx_sys::name_os_thread_ascii(native_tid, s),
-        Str::Unicode(s) => nvtx_sys::name_os_thread_unicode(native_tid, s),
+    match name.into() {
+        Str::Ascii(s) => nvtx_sys::name_os_thread_ascii(native_tid, &s),
+        Str::Unicode(s) => nvtx_sys::name_os_thread_unicode(native_tid, &s),
     }
 }
 

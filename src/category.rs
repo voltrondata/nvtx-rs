@@ -19,9 +19,9 @@ impl Category {
     pub fn new(name: impl Into<Str>) -> Category {
         static COUNT: AtomicU32 = AtomicU32::new(0);
         let id: u32 = 1 + COUNT.fetch_add(1, Ordering::SeqCst);
-        match &name.into() {
-            Str::Ascii(s) => nvtx_sys::name_category_ascii(id, s),
-            Str::Unicode(s) => nvtx_sys::name_category_unicode(id, s),
+        match name.into() {
+            Str::Ascii(s) => nvtx_sys::name_category_ascii(id, &s),
+            Str::Unicode(s) => nvtx_sys::name_category_unicode(id, &s),
         }
         Category { id }
     }

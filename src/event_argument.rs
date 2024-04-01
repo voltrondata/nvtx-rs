@@ -8,9 +8,9 @@ use crate::{EventAttributes, Message};
 ///   - Otherwise, the existing [`EventAttributes`] will be used for the event.
 #[derive(Debug, Clone)]
 pub enum EventArgument {
-    /// holds a Message
+    /// Holds a Message.
     Message(Message),
-    /// holds an EventAttributes
+    /// Holds an EventAttributes.
     Attributes(EventAttributes),
 }
 

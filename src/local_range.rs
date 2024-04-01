@@ -31,10 +31,8 @@ impl LocalRange {
     /// ```
     pub fn new(arg: impl Into<EventArgument>) -> LocalRange {
         match arg.into() {
-            EventArgument::Message(m) => match &m {
-                Message::Ascii(s) => nvtx_sys::range_push_ascii(s),
-                Message::Unicode(s) => nvtx_sys::range_push_unicode(s),
-            },
+            EventArgument::Message(Message::Ascii(s)) => nvtx_sys::range_push_ascii(&s),
+            EventArgument::Message(Message::Unicode(s)) => nvtx_sys::range_push_unicode(&s),
             EventArgument::Attributes(a) => nvtx_sys::range_push_ex(&a.encode()),
         };
         LocalRange {

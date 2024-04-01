@@ -1,7 +1,7 @@
 use crate::{Category, Color, Message, Payload, TypeValueEncodable};
 
 /// All attributes that are associated with marks and ranges.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct EventAttributes {
     pub(super) category: Option<Category>,
     pub(super) color: Option<Color>,
@@ -47,10 +47,8 @@ impl EventAttributes {
 impl<T: Into<Message>> From<T> for EventAttributes {
     fn from(value: T) -> Self {
         EventAttributes {
-            category: None,
-            color: None,
-            payload: None,
             message: Some(value.into()),
+            ..Default::default()
         }
     }
 }

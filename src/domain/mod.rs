@@ -57,9 +57,9 @@ impl Domain {
     /// ```
     pub fn new(name: impl Into<Str>) -> Self {
         Domain {
-            handle: match &name.into() {
-                Str::Ascii(s) => nvtx_sys::domain_create_ascii(s),
-                Str::Unicode(s) => nvtx_sys::domain_create_unicode(s),
+            handle: match name.into() {
+                Str::Ascii(s) => nvtx_sys::domain_create_ascii(&s),
+                Str::Unicode(s) => nvtx_sys::domain_create_unicode(&s),
             },
             registered_categories: AtomicU32::new(0),
         }
@@ -94,12 +94,11 @@ impl Domain {
     /// let my_str = domain.register_string("My immutable string");
     /// ```
     pub fn register_string(&self, string: impl Into<Str>) -> RegisteredString<'_> {
-        let handle = match &string.into() {
-            Str::Ascii(s) => nvtx_sys::domain_register_string_ascii(self.handle, s),
-            Str::Unicode(s) => nvtx_sys::domain_register_string_unicode(self.handle, s),
-        };
         RegisteredString {
-            handle,
+            handle: match string.into() {
+                Str::Ascii(s) => nvtx_sys::domain_register_string_ascii(self.handle, &s),
+                Str::Unicode(s) => nvtx_sys::domain_register_string_unicode(self.handle, &s),
+            },
             domain: self,
         }
     }
@@ -135,9 +134,9 @@ impl Domain {
     /// ```
     pub fn register_category(&self, name: impl Into<Str>) -> Category<'_> {
         let id = 1 + self.registered_categories.fetch_add(1, Ordering::SeqCst);
-        match &name.into() {
-            Str::Ascii(s) => nvtx_sys::domain_name_category_ascii(self.handle, id, s),
-            Str::Unicode(s) => nvtx_sys::domain_name_category_unicode(self.handle, id, s),
+        match name.into() {
+            Str::Ascii(s) => nvtx_sys::domain_name_category_ascii(self.handle, id, &s),
+            Str::Unicode(s) => nvtx_sys::domain_name_category_unicode(self.handle, id, &s),
         }
         Category { id, domain: self }
     }
@@ -295,8 +294,9 @@ impl Domain {
         }
     }
 
-    /// Create a user defined synchronization object This is used to track non-OS
-    /// synchronization working with spinlocks and atomics.
+    /// Create a user defined synchronization object.
+    ///
+    /// This is used to track non-OS synchronization working with spinlocks and atomics.
     pub fn user_sync<'a>(&'a self, name: impl Into<Message<'a>>) -> sync::UserSync<'a> {
         let message = name.into();
         let (msg_type, msg_value) = message.encode();
