@@ -21,15 +21,15 @@ pub use cuda::CudaIdentifier;
 /// Identifier used for supported resource types
 #[non_exhaustive]
 pub enum Identifier {
-    /// generic identifier
+    /// Generic identifier
     Generic(GenericIdentifier),
-    /// pthread-specific identifier
+    /// PThread-specific identifier
     #[cfg(target_family = "unix")]
     PThread(PThreadIdentifier),
-    /// cuda specific identifier
+    /// CUDA specific identifier
     #[cfg(feature = "cuda")]
     Cuda(CudaIdentifier),
-    /// cuda runtime specific identifier
+    /// CUDA runtime specific identifier
     #[cfg(feature = "cuda_runtime")]
     CudaRuntime(CudaRuntimeIdentifier),
 }

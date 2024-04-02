@@ -3,23 +3,7 @@ use crate::TypeValueEncodable;
 #[cfg(feature = "color-name")]
 pub use color_name::colors::*;
 
-/// Represents a color in use for controlling appearance within NSight Systems
-///
-/// ```
-/// // creation of a color from specific channel values:
-/// let translucent_orange = nvtx::Color::new(255, 192, 0, 128);
-///
-/// // creation of a color from pre-specified names:
-/// #[cfg(feature = "color-name")]
-/// let salmon : nvtx::Color = nvtx::color::salmon.into();
-///
-/// // modification of a color after creation:
-///
-/// let opaque_orange = translucent_orange.with_alpha(255);
-///
-/// #[cfg(feature = "color-name")]
-/// let translucent_salmon = salmon.with_alpha(128);
-///
+/// Represents a color in use for controlling appearance within NSight profilers.
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
     /// alpha channel
@@ -39,6 +23,21 @@ impl From<[u8; 3]> for Color {
             r: value[0],
             g: value[1],
             b: value[2],
+        }
+    }
+}
+
+/// Convert from u32 (hex) to Color
+///
+/// If the most-significant (BE) byte is 00, then treat the value as RGB
+/// Else the most-significant (BE) byte represents the alpha channel (ARGB)
+impl From<u32> for Color {
+    fn from(value: u32) -> Self {
+        let [a, r, g, b] = value.to_be_bytes();
+        if value & 0xFFFFFF == value {
+            Color { a: 255, r, g, b }
+        } else {
+            Color { a, r, g, b }
         }
     }
 }
@@ -99,7 +98,7 @@ impl TypeValueEncodable for Color {
     type Value = u32;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        let as_u32 = u32::from_ne_bytes([self.a, self.r, self.g, self.b]);
+        let as_u32 = u32::from_be_bytes([self.a, self.r, self.g, self.b]);
         (Self::Type::NVTX_COLOR_ARGB, as_u32)
     }
 

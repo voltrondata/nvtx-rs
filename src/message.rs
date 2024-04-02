@@ -2,15 +2,15 @@ use crate::{Str, TypeValueEncodable};
 use std::ffi::CString;
 use widestring::WideCString;
 
-/// Represents a message for use within events and ranges
+/// Represents a message for use within events and ranges.
 ///
 /// * [`Message::Ascii`] is the discriminator for ASCII C strings
 /// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// discriminator for an owned ASCII string
+    /// An owned ASCII string.
     Ascii(CString),
-    /// discriminator for an owned Unicode string
+    /// An owned Unicode string.
     Unicode(WideCString),
 }
 
@@ -28,7 +28,7 @@ impl TypeValueEncodable for Message {
     type Value = nvtx_sys::MessageValue;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        match &self {
+        match self {
             Message::Ascii(s) => (
                 Self::Type::NVTX_MESSAGE_TYPE_ASCII,
                 Self::Value { ascii: s.as_ptr() },

@@ -2,7 +2,7 @@ use super::EventArgument;
 use crate::Domain;
 use std::marker::PhantomData;
 
-/// A RAII-like object for modeling callstack Ranges within a Domain
+/// A RAII-like object for modeling callstack (thread-local) Ranges within a Domain.
 #[derive(Debug)]
 pub struct LocalRange<'a> {
     pub(super) domain: &'a Domain,

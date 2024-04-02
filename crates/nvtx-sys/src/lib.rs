@@ -7,47 +7,53 @@ pub mod ffi {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-/// NVTX version compiled
+/// The NVTX version.
 pub const NVTX_VERSION: i16 = ffi::NVTX_VERSION as i16;
 
-/// A unique range identifier
+/// A unique range identifier.
 pub type RangeId = ffi::nvtxRangeId_t;
 
-/// Struct representing all possible Event attributes
+/// Struct representing all possible Event attributes.
 pub type EventAttributes = ffi::nvtxEventAttributes_t;
 
-/// Struct representing all possible Resource attributes
+/// Struct representing all possible Resource attributes.
 pub type ResourceAttributes = ffi::nvtxResourceAttributes_t;
 
-/// Struct representing all possible User-defined Synchronization attributes
+/// Struct representing all possible User-defined Synchronization attributes.
 pub type SyncUserAttributes = ffi::nvtxSyncUserAttributes_t;
 
-/// [`ResourceAttributes`] identifier union
+/// [`ResourceAttributes`] identifier union.
 pub type ResourceAttributesIdentifier = ffi::nvtxResourceAttributes_v0_identifier_t;
-/// [`EventAttributes`] color type
+/// [`EventAttributes`] color type.
 pub type ColorType = ffi::nvtxColorType_t;
-/// [`EventAttributes`] and [`ResourceAttributes`] message type
+/// [`EventAttributes`] and [`ResourceAttributes`] message type.
 pub type MessageType = ffi::nvtxMessageType_t;
-/// [`EventAttributes`] and [`ResourceAttributes`] message value
+/// [`EventAttributes`] and [`ResourceAttributes`] message value.
 pub type MessageValue = ffi::nvtxMessageValue_t;
-/// [`EventAttributes`] payload type
+/// [`EventAttributes`] payload type.
 pub type PayloadType = ffi::nvtxPayloadType_t;
-/// [`EventAttributes`] payload value union
+/// [`EventAttributes`] payload value union.
 pub type PayloadValue = ffi::nvtxEventAttributes_v2_payload_t;
 
-/// Unique handle for a registered domain
+/// Unique handle for a registered domain.
 #[derive(Debug, Clone, Copy)]
 pub struct DomainHandle {
     handle: ffi::nvtxDomainHandle_t,
 }
 
-/// Unique handle for a registered resource
+unsafe impl Send for DomainHandle {}
+unsafe impl Sync for DomainHandle {}
+
+/// Unique handle for a registered resource.
 #[derive(Clone, Copy)]
 pub struct ResourceHandle {
     handle: ffi::nvtxResourceHandle_t,
 }
 
-/// Unique handle for a registered string
+unsafe impl Send for ResourceHandle {}
+unsafe impl Sync for ResourceHandle {}
+
+/// Unique handle for a registered string.
 #[derive(Debug, Clone, Copy)]
 pub struct StringHandle {
     handle: ffi::nvtxStringHandle_t,
@@ -59,47 +65,62 @@ impl From<StringHandle> for ffi::nvtxStringHandle_t {
     }
 }
 
-/// Unique handle for a registered user-defined synchronization object
+unsafe impl Send for StringHandle {}
+unsafe impl Sync for StringHandle {}
+
+/// Unique handle for a registered user-defined synchronization object.
 #[derive(Debug, Clone, Copy)]
 pub struct SyncUserHandle {
     handle: ffi::nvtxSyncUser_t,
 }
 
+unsafe impl Send for SyncUserHandle {}
+unsafe impl Sync for SyncUserHandle {}
+
 #[cfg(feature = "cuda_runtime")]
-/// An opaque CUDA Runtime event type
+/// An opaque CUDA Runtime event type.
 pub type CudaEvent = ffi::cudaEvent_t;
 #[cfg(feature = "cuda_runtime")]
-/// An opaque CUDA Runtime stream type
+/// An opaque CUDA Runtime stream type.
 pub type CudaStream = ffi::cudaStream_t;
 
 #[cfg(feature = "cuda")]
-/// An opaque CUDA context type
+/// An opaque CUDA context type.
 pub type CuContext = ffi::CUcontext;
 #[cfg(feature = "cuda")]
-/// An opaque CUDA device type
+/// An opaque CUDA device type.
 pub type CuDevice = ffi::CUdevice;
 #[cfg(feature = "cuda")]
-/// An opaque CUDA event type
+/// An opaque CUDA event type.
 pub type CuEvent = ffi::CUevent;
 #[cfg(feature = "cuda")]
-/// An opaque CUDA stream type
+/// An opaque CUDA stream type.
 pub type CuStream = ffi::CUstream;
 
-/// Resource types for use within [`crate::ResourceAttributes`]
+/// Resource types for use within [`crate::ResourceAttributes`].
 pub mod resource_type {
     use crate::ffi::nvtxResourceGenericType_t::*;
+    /// An unknown resource type.
     pub const UNKNOWN: u32 = NVTX_RESOURCE_TYPE_UNKNOWN;
+    /// A handle to a generic resource.
     pub const GENERIC_HANDLE: u32 = NVTX_RESOURCE_TYPE_GENERIC_HANDLE;
+    /// A pointer to a generic resource.
     pub const GENERIC_POINTER: u32 = NVTX_RESOURCE_TYPE_GENERIC_POINTER;
+    /// A handle to a native thread.
     pub const GENERIC_THREAD_NATIVE: u32 = NVTX_RESOURCE_TYPE_GENERIC_THREAD_NATIVE;
+    /// A handle to a posix thread.
     pub const GENERIC_THREAD_POSIX: u32 = NVTX_RESOURCE_TYPE_GENERIC_THREAD_POSIX;
 
     #[cfg(feature = "cuda")]
     mod cuda {
         use crate::ffi::nvtxResourceCUDAType_t::*;
+        /// A CUDA device resource.
         pub const CUDA_DEVICE: u32 = NVTX_RESOURCE_TYPE_CUDA_DEVICE;
+        /// A CUDA context resource.
         pub const CUDA_CONTEXT: u32 = NVTX_RESOURCE_TYPE_CUDA_CONTEXT;
+        /// A CUDA stream resource.
         pub const CUDA_STREAM: u32 = NVTX_RESOURCE_TYPE_CUDA_STREAM;
+        /// A CUDA event resource.
         pub const CUDA_EVENT: u32 = NVTX_RESOURCE_TYPE_CUDA_EVENT;
     }
     #[cfg(feature = "cuda")]
@@ -108,8 +129,11 @@ pub mod resource_type {
     #[cfg(feature = "cuda_runtime")]
     mod cuda_runtime {
         use crate::ffi::nvtxResourceCUDARTType_t::*;
+        /// A CUDA runtime device resource.
         pub const CUDART_DEVICE: u32 = NVTX_RESOURCE_TYPE_CUDART_DEVICE;
+        /// A CUDA runtime stream resource.
         pub const CUDART_STREAM: u32 = NVTX_RESOURCE_TYPE_CUDART_STREAM;
+        /// A CUDA runtime event resource.
         pub const CUDART_EVENT: u32 = NVTX_RESOURCE_TYPE_CUDART_EVENT;
     }
     #[cfg(feature = "cuda_runtime")]
@@ -118,11 +142,17 @@ pub mod resource_type {
     #[cfg(target_family = "unix")]
     mod pthread {
         use crate::ffi::nvtxResourceSyncPosixThreadType_t::*;
+        /// A pthread mutex resource.
         pub const PTHREAD_MUTEX: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_MUTEX;
+        /// A pthread condition variable resource.
         pub const PTHREAD_CONDITION: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_CONDITION;
+        /// A pthread rwlock resource.
         pub const PTHREAD_RWLOCK: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_RWLOCK;
+        /// A pthread barrier resource.
         pub const PTHREAD_BARRIER: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_BARRIER;
+        /// A pthread spinlock resource.
         pub const PTHREAD_SPINLOCK: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_SPINLOCK;
+        /// A pthread oncelock resource.
         pub const PTHREAD_ONCE: u32 = NVTX_RESOURCE_TYPE_SYNC_PTHREAD_ONCE;
     }
     #[cfg(target_family = "unix")]
@@ -154,74 +184,102 @@ pub fn mark_unicode(message: &WideCStr) {
 
 #[must_use]
 /// Start a process-visible range within a domain with an attributes structure.
+///
+/// To close the range, see [`domain_range_end`].
 pub fn domain_range_start_ex(domain: DomainHandle, eventAttrib: &EventAttributes) -> RangeId {
     unsafe { crate::ffi::nvtxDomainRangeStartEx(domain.handle, eventAttrib) }
 }
 
 #[must_use]
 /// Start a process-visible range with an attributes structure.
+///
+/// To close the range, see [`range_end`].
 pub fn range_start_ex(eventAttrib: &EventAttributes) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartEx(eventAttrib) }
 }
 
 #[must_use]
 /// Start a process-visible range with an ASCII string.
+///
+/// To close the range, see [`range_end`].
 pub fn range_start_ascii(message: &CStr) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartA(message.as_ptr()) }
 }
 
 #[must_use]
 /// Start a process-visible range with a Unicde string.
+///
+/// To close the range, see [`range_end`].
 pub fn range_start_unicode(message: &WideCStr) -> RangeId {
     unsafe { crate::ffi::nvtxRangeStartW(message.as_ptr().cast()) }
 }
 
 /// End a process-visible range within a domain.
 ///
-/// The range id is created by [`crate::nvtxDomainRangeStartEx`].
+/// The range id is created by [`domain_range_start_ex`]
 pub fn domain_range_end(domain: DomainHandle, id: RangeId) {
     unsafe { crate::ffi::nvtxDomainRangeEnd(domain.handle, id) }
 }
 
 /// End a process-visible range.
 ///
-/// The range id is created by [`crate::nvtxRangeStartA`] or [`crate::nvtxRangeStartW`] or [`crate::nvtxRangeStartEx`].
+/// The range id is created by one of:
+/// * [`range_start_ascii`]
+/// * [`range_start_unicode`]
+/// * [`range_start_ex`]
 pub fn range_end(id: RangeId) {
     unsafe { crate::ffi::nvtxRangeEnd(id) }
 }
 
 /// Start a thread-visible range within a domain with an attributes structure.
+///
+/// To close, see [`domain_range_pop`].
 pub fn domain_range_push_ex(domain: DomainHandle, eventAttrib: &EventAttributes) -> i32 {
     unsafe { crate::ffi::nvtxDomainRangePushEx(domain.handle, eventAttrib) }
 }
 
 /// Start a thread-visible range with an attributes structure.
+///
+/// To close, see [`range_pop`].
 pub fn range_push_ex(eventAttrib: &EventAttributes) -> i32 {
     unsafe { crate::ffi::nvtxRangePushEx(eventAttrib) }
 }
 
 /// Start a thread-visible range with an ASCII string.
+///
+/// To close, see [`range_pop`].
 pub fn range_push_ascii(message: &CStr) -> i32 {
     unsafe { crate::ffi::nvtxRangePushA(message.as_ptr()) }
 }
 
 /// Start a thread-visible range with a Unicode string.
+///
+/// To close, see [`range_pop`].
 pub fn range_push_unicode(message: &WideCStr) -> i32 {
     unsafe { crate::ffi::nvtxRangePushW(message.as_ptr().cast()) }
 }
 
 /// End a thread-visible range within a domain.
+///
+/// The range would have been created via [`domain_range_push_ex`].
 pub fn domain_range_pop(domain: DomainHandle) -> i32 {
     unsafe { crate::ffi::nvtxDomainRangePop(domain.handle) }
 }
 
 /// End a thread-visible range.
+///
+/// The range would have been created via one of:
+/// * [`range_push_ascii`]
+/// * [`range_push_unicode`]
+/// * [`range_push_ex`]
 pub fn range_pop() -> i32 {
     unsafe { crate::ffi::nvtxRangePop() }
 }
 
 #[must_use]
 /// Create a named resource within a domain.
+///
+/// To destroy the resource, see [`domain_resource_destroy`].
 pub fn domain_resource_create(domain: DomainHandle, attribs: ResourceAttributes) -> ResourceHandle {
     ResourceHandle {
         handle: unsafe {
@@ -235,7 +293,7 @@ pub fn domain_resource_create(domain: DomainHandle, attribs: ResourceAttributes)
 
 /// Destroy a named resource.
 ///
-/// The named resource is created by [`crate::nvtxDomainResourceDestroy`].
+/// The named resource is created by [`domain_resource_create`].
 pub fn domain_resource_destroy(resource: ResourceHandle) {
     unsafe { crate::ffi::nvtxDomainResourceDestroy(resource.handle) }
 }
@@ -310,7 +368,7 @@ pub fn domain_create_unicode(name: &WideCStr) -> DomainHandle {
 
 /// Destroy a domain.
 ///
-/// The domain is created by [`crate::nvtxDomainCreateA`] or [`crate::nvtxDomainCreateW`]).
+/// The domain is created by [`domain_create_ascii`] or [`domain_create_unicode`].
 pub fn domain_destroy(domain: DomainHandle) {
     unsafe { crate::ffi::nvtxDomainDestroy(domain.handle) }
 }
@@ -444,7 +502,7 @@ pub fn domain_syncuser_create(domain: DomainHandle, attribs: SyncUserAttributes)
 
 /// Destroy a user-defined synchronization.
 ///
-/// Created by [`crate::nvtxDomainSyncUserCreate`].
+/// Created by [`domain_syncuser_create`].
 pub fn domain_syncuser_destroy(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserDestroy(handle.handle) }
 }
@@ -456,21 +514,21 @@ pub fn domain_syncuser_acquire_start(handle: SyncUserHandle) {
 
 /// Indicate that a user-defined synchronization acquisition failed.
 ///
-/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireStart`].
+/// Note: this call is only valid after a call to [`domain_syncuser_acquire_start`].
 pub fn domain_syncuser_acquire_failed(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserAcquireFailed(handle.handle) }
 }
 
 /// Indicate that a user-defined synchronization acquisition succeeded.
 ///
-/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireStart`].
+/// Note: this call is only valid after a call to [`domain_syncuser_acquire_start`].
 pub fn domain_syncuser_acquire_success(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserAcquireSuccess(handle.handle) }
 }
 
 /// Indicate that a user-defined synchronization is released.
 ///
-/// Note: this call is only valid after a call to [`crate::nvtxDomainSyncUserAcquireSuccess`].
+/// Note: this call is only valid after a call to [`domain_syncuser_acquire_success`].
 pub fn domain_syncuser_acquire_releasing(handle: SyncUserHandle) {
     unsafe { crate::ffi::nvtxDomainSyncUserReleasing(handle.handle) }
 }

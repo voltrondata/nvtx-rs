@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString};
 use widestring::{WideCStr, WideCString};
 
-/// A convenience wrapper for various string types
+/// A convenience wrapper for various string types.
 ///
 /// * [`Str::Ascii`] is the discriminator for C string types
 /// * [`Str::Unicode`] is the discriminator for Rust string types and C wide string types

@@ -3,13 +3,13 @@ use crate::TypeValueEncodable;
 
 /// Identifiers used for Generic resources
 pub enum GenericIdentifier {
-    /// generic pointer
+    /// Generic pointer
     Pointer(*const ::std::os::raw::c_void),
-    /// generic handle
+    /// Generic handle
     Handle(u64),
-    /// generic thread native
+    /// Generic thread native
     NativeThread(u64),
-    /// generic thread posix
+    /// Generic thread posix
     PosixThread(u64),
 }
 

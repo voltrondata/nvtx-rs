@@ -7,19 +7,19 @@ use widestring::WideCString;
 ///
 /// * [`Message::Ascii`] is the discriminator for ASCII C strings
 /// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings
-/// * [`Message::Registered`] is the discriminator for nvtx domain-registered strings
+/// * [`Message::Registered`] is the discriminator for NVTX domain-registered strings
 #[derive(Debug, Clone)]
 pub enum Message<'a> {
-    /// discriminator for an owned ASCII string
+    /// An owned ASCII string.
     Ascii(CString),
-    /// discriminator for an owned Unicode string
+    /// An owned Unicode string.
     Unicode(WideCString),
-    /// discriminator for a registered string belonging to a domain
-    Registered(&'a RegisteredString<'a>),
+    /// A registered string handle belonging to a domain.
+    Registered(RegisteredString<'a>),
 }
 
-impl<'a> From<&'a RegisteredString<'a>> for Message<'a> {
-    fn from(v: &'a RegisteredString) -> Self {
+impl<'a> From<RegisteredString<'a>> for Message<'a> {
+    fn from(v: RegisteredString<'a>) -> Self {
         Self::Registered(v)
     }
 }
@@ -38,7 +38,7 @@ impl<'a> TypeValueEncodable for Message<'a> {
     type Value = nvtx_sys::MessageValue;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        match &self {
+        match self {
             Message::Ascii(s) => (
                 Self::Type::NVTX_MESSAGE_TYPE_ASCII,
                 Self::Value { ascii: s.as_ptr() },
@@ -52,7 +52,7 @@ impl<'a> TypeValueEncodable for Message<'a> {
             Message::Registered(r) => (
                 Self::Type::NVTX_MESSAGE_TYPE_REGISTERED,
                 Self::Value {
-                    registered: r.handle.into(),
+                    registered: r.handle().into(),
                 },
             ),
         }

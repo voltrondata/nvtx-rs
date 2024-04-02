@@ -9,17 +9,17 @@ use crate::{
 
 /// Identifiers used for PThread resources
 pub enum PThreadIdentifier {
-    /// pthread mutex
+    /// PThread mutex
     Mutex(*const pthread_mutex_t),
-    /// pthread condition_variable
+    /// PThread condition_variable
     Condition(*const pthread_cond_t),
-    /// pthread rwlock
+    /// PThread rwlock
     RWLock(*const pthread_rwlock_t),
-    /// pthread barrier
+    /// PThread barrier
     Barrier(*const pthread_barrier_t),
-    /// pthread spinlock
+    /// PThread spinlock
     Spinlock(*const pthread_spinlock_t),
-    /// pthread once
+    /// PThread once
     Once(*const pthread_once_t),
 }
 

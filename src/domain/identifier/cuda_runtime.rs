@@ -3,11 +3,11 @@ use crate::TypeValueEncodable;
 
 /// Identifiers used for CUDA resources
 pub enum CudaRuntimeIdentifier {
-    /// device
+    /// Device
     Device(i32),
-    /// event
+    /// Event
     Event(nvtx_sys::CudaEvent),
-    /// stream
+    /// Stream
     Stream(nvtx_sys::CudaStream),
 }
 
