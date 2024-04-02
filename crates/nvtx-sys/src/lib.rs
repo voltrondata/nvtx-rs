@@ -45,7 +45,7 @@ unsafe impl Send for DomainHandle {}
 unsafe impl Sync for DomainHandle {}
 
 /// Unique handle for a registered resource.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct ResourceHandle {
     handle: ffi::nvtxResourceHandle_t,
 }
@@ -54,7 +54,7 @@ unsafe impl Send for ResourceHandle {}
 unsafe impl Sync for ResourceHandle {}
 
 /// Unique handle for a registered string.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StringHandle {
     handle: ffi::nvtxStringHandle_t,
 }
@@ -69,7 +69,7 @@ unsafe impl Send for StringHandle {}
 unsafe impl Sync for StringHandle {}
 
 /// Unique handle for a registered user-defined synchronization object.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SyncUserHandle {
     handle: ffi::nvtxSyncUser_t,
 }

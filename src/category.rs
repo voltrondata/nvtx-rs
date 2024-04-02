@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 /// * [`crate::register_category`]
 /// * [`crate::register_categories`]
 /// * [`Category::new`]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Category {
     pub(super) id: u32,
 }
@@ -24,5 +24,17 @@ impl Category {
             Str::Unicode(s) => nvtx_sys::name_category_unicode(id, &s),
         }
         Category { id }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let cat1 = Category::new("category 1");
+        let cat2 = Category::new("category 1");
+        assert_ne!(cat1, cat2);
     }
 }

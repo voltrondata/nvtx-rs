@@ -145,3 +145,58 @@ impl EventAttributesBuilder {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::CString;
+
+    use crate::{register_category, Color, EventAttributesBuilder, Message, Payload};
+
+    #[test]
+    fn test_builder_color() {
+        let builder = EventAttributesBuilder::default();
+        let color = Color::new(0x11, 0x22, 0x44, 0x88);
+        let attr = builder.color(color).build();
+        assert!(matches!(attr.color, Some(c) if c == color));
+    }
+
+    #[test]
+    fn test_builder_category() {
+        let builder = EventAttributesBuilder::default();
+        let cat = register_category("cat");
+        let attr = builder.category(cat).build();
+        assert!(matches!(attr.category, Some(c) if c == cat));
+    }
+
+    #[test]
+    fn test_builder_payload() {
+        let builder = EventAttributesBuilder::default();
+        let attr = builder.clone().payload(1_i32).build();
+        assert!(matches!(attr.payload, Some(Payload::Int32(i)) if i == 1_i32));
+        let attr = builder.clone().payload(2_u32).build();
+        assert!(matches!(attr.payload, Some(Payload::Uint32(i)) if i == 2_u32));
+        let attr = builder.clone().payload(1_i64).build();
+        assert!(matches!(attr.payload, Some(Payload::Int64(i)) if i == 1_i64));
+        let attr = builder.clone().payload(2_u64).build();
+        assert!(matches!(attr.payload, Some(Payload::Uint64(i)) if i == 2_u64));
+        let attr = builder.clone().payload(1.0_f32).build();
+        assert!(matches!(attr.payload, Some(Payload::Float(i)) if i == 1.0_f32));
+        let attr = builder.clone().payload(2.0_f64).build();
+        assert!(matches!(attr.payload, Some(Payload::Double(i)) if i == 2.0_f64));
+    }
+
+    #[test]
+    fn test_builder_message() {
+        let builder = EventAttributesBuilder::default();
+        let string = "This is a message";
+        let attr = builder.message(string).build();
+        assert!(
+            matches!(attr.message, Some(Message::Unicode(s)) if s.to_string().unwrap() == string)
+        );
+
+        let builder = EventAttributesBuilder::default();
+        let cstring = CString::new("This is a message").unwrap();
+        let attr = builder.message(cstring.clone()).build();
+        assert!(matches!(attr.message, Some(Message::Ascii(s)) if s == cstring));
+    }
+}
