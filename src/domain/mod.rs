@@ -217,10 +217,7 @@ impl Domain {
             EventArgument::Message(m) => m.into(),
         };
         if let Some(domain) = &attribute.domain {
-            assert!(
-                std::ptr::addr_eq(*domain, self),
-                "attribute's domain invalid"
-            );
+            assert!(std::ptr::eq(*domain, self), "attribute's domain invalid");
         }
         let encoded = attribute.encode();
         nvtx_sys::domain_mark_ex(self.handle, &encoded)
@@ -287,10 +284,7 @@ impl Domain {
             EventArgument::Message(m) => m.into(),
         };
         if let Some(domain) = &arg.domain {
-            assert!(
-                std::ptr::addr_eq(*domain, self),
-                "attribute's domain invalid"
-            );
+            assert!(std::ptr::eq(*domain, self), "attribute's domain invalid");
         }
         nvtx_sys::domain_range_start_ex(self.handle, &arg.encode())
     }
