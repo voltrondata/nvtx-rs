@@ -18,10 +18,11 @@ impl<'a, T: Into<EventAttributes<'a>>> From<T> for EventArgument<'a> {
     fn from(value: T) -> Self {
         match value.into() {
             EventAttributes {
+                domain: None,
                 category: None,
                 color: None,
-                payload: None,
                 message: Some(m),
+                payload: None,
             } => EventArgument::Message(m),
             attr => EventArgument::Attributes(attr),
         }

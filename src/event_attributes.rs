@@ -1,12 +1,12 @@
 use crate::{Category, Color, Message, Payload, TypeValueEncodable};
 
 /// All attributes that are associated with marks and ranges.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct EventAttributes {
     pub(super) category: Option<Category>,
     pub(super) color: Option<Color>,
-    pub(super) payload: Option<Payload>,
     pub(super) message: Option<Message>,
+    pub(super) payload: Option<Payload>,
 }
 
 impl EventAttributes {
@@ -47,8 +47,10 @@ impl EventAttributes {
 impl<T: Into<Message>> From<T> for EventAttributes {
     fn from(value: T) -> Self {
         EventAttributes {
+            category: None,
+            color: None,
             message: Some(value.into()),
-            ..Default::default()
+            payload: None,
         }
     }
 }
@@ -59,30 +61,30 @@ impl<T: Into<Message>> From<T> for EventAttributes {
 /// let cat = nvtx::Category::new("Category1");
 ///
 /// let attr = nvtx::EventAttributesBuilder::default()
-///                .category(&cat)
+///                .category(cat)
 ///                .color([20, 192, 240])
 ///                .payload(3.141592)
 ///                .message("Hello")
 ///                .build();
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct EventAttributesBuilder<'a> {
-    pub(super) category: Option<&'a Category>,
+pub struct EventAttributesBuilder {
+    pub(super) category: Option<Category>,
     pub(super) color: Option<Color>,
     pub(super) payload: Option<Payload>,
     pub(super) message: Option<Message>,
 }
 
-impl<'a> EventAttributesBuilder<'a> {
+impl EventAttributesBuilder {
     /// Update the builder's held [`Category`].
     ///
     /// ```
     /// let cat = nvtx::Category::new("Category1");
     /// let builder = nvtx::EventAttributesBuilder::default();
     /// // ...
-    /// let builder = builder.category(&cat);
+    /// let builder = builder.category(cat);
     /// ```
-    pub fn category(mut self, category: &'a Category) -> EventAttributesBuilder<'a> {
+    pub fn category(mut self, category: Category) -> EventAttributesBuilder {
         self.category = Some(category);
         self
     }
@@ -94,7 +96,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// // ...
     /// let builder = builder.color([255, 255, 255]);
     /// ```
-    pub fn color(mut self, color: impl Into<Color>) -> EventAttributesBuilder<'a> {
+    pub fn color(mut self, color: impl Into<Color>) -> EventAttributesBuilder {
         self.color = Some(color.into());
         self
     }
@@ -106,7 +108,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// // ...
     /// let builder = builder.payload(3.1415926535);
     /// ```
-    pub fn payload(mut self, payload: impl Into<Payload>) -> EventAttributesBuilder<'a> {
+    pub fn payload(mut self, payload: impl Into<Payload>) -> EventAttributesBuilder {
         self.payload = Some(payload.into());
         self
     }
@@ -118,7 +120,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// // ...
     /// let builder = builder.message("test");
     /// ```
-    pub fn message(mut self, message: impl Into<Message>) -> EventAttributesBuilder<'a> {
+    pub fn message(mut self, message: impl Into<Message>) -> EventAttributesBuilder {
         self.message = Some(message.into());
         self
     }
@@ -130,13 +132,13 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let attr = nvtx::EventAttributesBuilder::default()
     ///                 .message("Example Range")
     ///                 .color([224, 192, 128])
-    ///                 .category(&cat)
+    ///                 .category(cat)
     ///                 .payload(1234567)
     ///                 .build();
     /// ```
     pub fn build(self) -> EventAttributes {
         EventAttributes {
-            category: self.category.copied(),
+            category: self.category,
             color: self.color,
             payload: self.payload,
             message: self.message,

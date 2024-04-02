@@ -20,8 +20,8 @@ impl<T: Into<EventAttributes>> From<T> for EventArgument {
             EventAttributes {
                 category: None,
                 color: None,
-                payload: None,
                 message: Some(m),
+                payload: None,
             } => EventArgument::Message(m),
             attr => EventArgument::Attributes(attr),
         }

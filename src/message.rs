@@ -28,7 +28,7 @@ impl TypeValueEncodable for Message {
     type Value = nvtx_sys::MessageValue;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        match &self {
+        match self {
             Message::Ascii(s) => (
                 Self::Type::NVTX_MESSAGE_TYPE_ASCII,
                 Self::Value { ascii: s.as_ptr() },

@@ -30,15 +30,18 @@ color-name = ["dep:color-name"]
 name-current-thread = ["dep:gettid"]
 cuda = ["nvtx-sys/cuda"]
 cuda_runtime = ["nvtx-sys/cuda_runtime"]
-tracing = ["dep:tracing", "dep:tracing-subscriber", "dep:color-name" ]
+tracing = ["dep:tracing-core", "dep:tracing-subscriber", "dep:color-name" ]
 
 [dependencies]
 color-name = { version = "1.1.0", optional = true }
 gettid = { version = "0.1.2", optional = true }
 nvtx-sys = { path = "crates/nvtx-sys" }
-tracing = { version = "0.1.40", optional = true, features = ["attributes"] }
+tracing-core = { version = "0.1.32", optional = true }
 tracing-subscriber = { version = "0.3.18", optional = true }
 widestring = "1.0.2"
+
+[dev-dependencies]
+tracing = { version = "0.1.40", features = ["attributes"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.153"

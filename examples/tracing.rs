@@ -1,7 +1,7 @@
 use tracing::{info, instrument};
 use tracing_subscriber::prelude::*;
 
-#[instrument(fields(color = "goldenrod", category = "A", payload = i, domain = "Domain1"))]
+#[instrument(target = "Domain1", fields(color = "goldenrod", category = "A", payload = i))]
 fn foo(i: u64) {
     for j in 1..=i {
         bar(j);
@@ -9,7 +9,7 @@ fn foo(i: u64) {
     }
 }
 
-#[instrument(fields(color = "plum", category = "B", payload = j, domain = "Domain1"))]
+#[instrument(target = "Domain1", fields(color = "plum", category = "B", payload = j))]
 fn bar(j: u64) {
     for k in 1..=j {
         baz(k);
@@ -17,7 +17,7 @@ fn bar(j: u64) {
     }
 }
 
-#[instrument(fields(color = "salmon", category = "A", payload = k, domain = "Domain1"))]
+#[instrument(target = "Domain1", fields(color = "salmon", category = "A", payload = k))]
 fn baz(k: u64) {
     std::thread::sleep(std::time::Duration::from_millis(10 * k));
 }
@@ -28,10 +28,10 @@ fn main() {
         .init();
 
     info!(
+        target: "Domain2",
         message = "At the beginning of the program",
         color = "blue",
         category = "B",
-        domain = "Domain2"
     );
     foo(10);
 }

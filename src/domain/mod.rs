@@ -85,8 +85,8 @@ impl Domain {
             domain: self,
             category: None,
             color: None,
-            payload: None,
             message: None,
+            payload: None,
         }
     }
 
@@ -116,10 +116,7 @@ impl Domain {
                 Str::Ascii(s) => nvtx_sys::domain_register_string_ascii(self.handle, &s),
                 Str::Unicode(s) => nvtx_sys::domain_register_string_unicode(self.handle, &s),
             });
-        RegisteredString {
-            handle,
-            domain: self,
-        }
+        RegisteredString::new(handle, self)
     }
 
     /// Register many immutable strings within the current domain.
@@ -171,7 +168,7 @@ impl Domain {
                 }
                 id
             });
-        Category { id, domain: self }
+        Category::new(id, self)
     }
 
     /// Register new categories within the domain.
@@ -212,13 +209,19 @@ impl Domain {
     ///     .build());
     ///
     /// let reg_str = domain.register_string("Registered String");
-    /// domain.mark(reg_str.clone());
+    /// domain.mark(reg_str);
     /// ```
     pub fn mark<'a>(&'a self, arg: impl Into<EventArgument<'a>>) {
         let attribute: EventAttributes<'a> = match arg.into() {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => m.into(),
         };
+        if let Some(domain) = &attribute.domain {
+            assert!(
+                std::ptr::addr_eq(*domain, self),
+                "attribute's domain invalid"
+            );
+        }
         let encoded = attribute.encode();
         nvtx_sys::domain_mark_ex(self.handle, &encoded)
     }
@@ -278,16 +281,22 @@ impl Domain {
     }
 
     /// Internal function for starting a range and returning a raw Range Id
-    pub(crate) fn range_start<'a>(&self, arg: impl Into<EventArgument<'a>>) -> u64 {
+    pub(super) fn range_start<'a>(&self, arg: impl Into<EventArgument<'a>>) -> u64 {
         let arg = match arg.into() {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => m.into(),
         };
+        if let Some(domain) = &arg.domain {
+            assert!(
+                std::ptr::addr_eq(*domain, self),
+                "attribute's domain invalid"
+            );
+        }
         nvtx_sys::domain_range_start_ex(self.handle, &arg.encode())
     }
 
     /// Internal function for ending a range given a raw Range Id
-    pub(crate) fn range_end(&self, range_id: u64) {
+    pub(super) fn range_end(&self, range_id: u64) {
         nvtx_sys::domain_range_end(self.handle, range_id);
     }
 

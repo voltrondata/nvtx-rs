@@ -38,7 +38,7 @@ impl<'a> TypeValueEncodable for Message<'a> {
     type Value = nvtx_sys::MessageValue;
 
     fn encode(&self) -> (Self::Type, Self::Value) {
-        match &self {
+        match self {
             Message::Ascii(s) => (
                 Self::Type::NVTX_MESSAGE_TYPE_ASCII,
                 Self::Value { ascii: s.as_ptr() },
@@ -52,7 +52,7 @@ impl<'a> TypeValueEncodable for Message<'a> {
             Message::Registered(r) => (
                 Self::Type::NVTX_MESSAGE_TYPE_REGISTERED,
                 Self::Value {
-                    registered: r.handle.into(),
+                    registered: r.handle().into(),
                 },
             ),
         }

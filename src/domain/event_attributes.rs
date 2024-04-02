@@ -2,12 +2,13 @@ use super::{Category, Message};
 use crate::{Color, Domain, Payload, Str, TypeValueEncodable};
 
 /// All attributes that are associated with marks and ranges.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct EventAttributes<'a> {
-    pub(crate) category: Option<Category<'a>>,
-    pub(crate) color: Option<Color>,
-    pub(crate) payload: Option<Payload>,
-    pub(crate) message: Option<Message<'a>>,
+    pub(super) domain: Option<&'a Domain>,
+    pub(super) category: Option<Category<'a>>,
+    pub(super) color: Option<Color>,
+    pub(super) payload: Option<Payload>,
+    pub(super) message: Option<Message<'a>>,
 }
 
 impl<'a> EventAttributes<'a> {
@@ -22,7 +23,7 @@ impl<'a> EventAttributes<'a> {
             .as_ref()
             .map(Payload::encode)
             .unwrap_or_else(Payload::default_encoding);
-        let cat = self.category.as_ref().map(|c| c.id).unwrap_or(0);
+        let cat = self.category.as_ref().map(Category::id).unwrap_or(0);
         let emit = |(t, v)| nvtx_sys::EventAttributes {
             version: nvtx_sys::NVTX_VERSION as u16,
             size: 48,
@@ -48,8 +49,11 @@ impl<'a> EventAttributes<'a> {
 impl<'a, T: Into<Message<'a>>> From<T> for EventAttributes<'a> {
     fn from(value: T) -> Self {
         EventAttributes {
+            domain: None,
+            category: None,
+            color: None,
             message: Some(value.into()),
-            ..Default::default()
+            payload: None,
         }
     }
 }
@@ -60,7 +64,7 @@ impl<'a, T: Into<Message<'a>>> From<T> for EventAttributes<'a> {
 /// let cat = nvtx::Category::new("Category1");
 ///
 /// let attr = nvtx::EventAttributesBuilder::default()
-///                .category(&cat)
+///                .category(cat)
 ///                .color([20, 192, 240])
 ///                .payload(3.141592)
 ///                .message("Hello")
@@ -85,11 +89,14 @@ impl<'a> EventAttributesBuilder<'a> {
     /// // ...
     /// let builder = domain.event_attributes_builder();
     /// // ...
-    /// let builder = builder.category(cat.clone());
+    /// let builder = builder.category(cat);
     /// ```
     pub fn category(mut self, category: Category<'a>) -> EventAttributesBuilder<'a> {
         assert!(
-            std::ptr::eq(category.domain, self.domain),
+            std::ptr::eq(
+                std::ptr::addr_of!(*category.domain()),
+                std::ptr::addr_of!(*self.domain)
+            ),
             "Builder's Domain differs from Category's Domain"
         );
         self.category = Some(category);
@@ -154,8 +161,11 @@ impl<'a> EventAttributesBuilder<'a> {
             Message::Registered(r) => r,
         };
         assert!(
-            std::ptr::eq(msg.domain, self.domain),
-            "Builder's Domain differs from domain::RegisteredString's Domain"
+            std::ptr::eq(
+                std::ptr::addr_of!(*msg.domain()),
+                std::ptr::addr_of!(*self.domain)
+            ),
+            "Builder's Domain differs from RegisteredString's Domain"
         );
         self.message = Some(Message::Registered(msg));
         self
@@ -169,12 +179,13 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let attr = domain.event_attributes_builder()
     ///                 .message("Example Range")
     ///                 .color([224, 192, 128])
-    ///                 .category(cat.clone())
+    ///                 .category(cat)
     ///                 .payload(1234567)
     ///                 .build();
     /// ```
     pub fn build(self) -> EventAttributes<'a> {
         EventAttributes {
+            domain: Some(self.domain),
             category: self.category,
             color: self.color,
             payload: self.payload,
