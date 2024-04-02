@@ -1,4 +1,4 @@
-use tracing::{info, instrument};
+use tracing::{info, info_span, instrument};
 use tracing_subscriber::prelude::*;
 
 #[instrument(target = "Domain1", fields(color = "goldenrod", category = "A", payload = i))]
@@ -28,8 +28,15 @@ fn main() {
         .init();
 
     info!(
+        name: "At the beginning of the program",
         target: "Domain2",
-        message = "At the beginning of the program",
+        color = "blue",
+        category = "B",
+    );
+
+    let _r = info_span!(
+        target: "Domain2",
+        "At the beginning of the program",
         color = "blue",
         category = "B",
     );

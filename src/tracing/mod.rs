@@ -10,38 +10,37 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 /// The tracing layer for nvtx range and events.
 ///
 /// **Supported fields**
-/// * `target` (`&str`) indicates a target domain name (`"NVTX"` when unspecified).
 /// * `category` (`&str`) provides a category within the target.
 /// * `color` (`&str`) -- the valid names align the names provided by the color names
 ///   defined within [`crate::color`].
 /// * `payload` (one of: `f64`, `u64`, `i64`, or `bool`) -- an additional value to track.
-/// * `message` (`&str`) for Marks only -- the span name is used as the message for Spans.
 ///
-/// `instrument` example:
+/// **Supported built-ins**
+/// * the **target** (`&str`) indicates a domain name
+/// * the **name** (`&str`) specifies the text for the Mark or Range.
+///
+/// ### `instrument` example:
 ///
 /// ```
 /// use tracing::instrument;
-///
-/// #[instrument(fields(color = "salmon", category = "cool", payload = k))]
+/// #[instrument(target = "domain", fields(color = "salmon", category = "cool", payload = k))]
 /// fn baz (k : u64) {
 ///     std::thread::sleep(std::time::Duration::from_millis(10 * k));
 /// }
 /// ```
 ///
-/// `mark` example:
+/// ### `mark` example:
 ///
 /// ```
 /// use tracing::info;
-///
-/// info!(target = "test", message = "At the beginning of the program", color = "blue");
+/// info!(name: "At the beginning of the program", target: "test", color = "blue");
 /// ```
 ///
-/// `span` example:
+/// ### `span` example:
 ///
 /// ```
 /// use tracing::info_span;
-///
-/// let span = info_span!("Running an arbitrary block!", color = "red", payload = 3.1415);
+/// let span = info_span!(target: "domain", "Running an arbitrary block!", color = "red", payload = 3.1415);
 /// span.in_scope(|| {
 ///    // do work inside the span...
 /// });
