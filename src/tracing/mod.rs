@@ -50,16 +50,11 @@ pub struct NvtxLayer {
     domains: Mutex<HashMap<String, crate::Domain>>,
 }
 
-static DEFAULT_DOMAIN_NAME: &str = "NVTX";
-
 impl Default for NvtxLayer {
     /// Create a new layer.
     fn default() -> NvtxLayer {
         NvtxLayer {
-            domains: Mutex::new(HashMap::from([(
-                DEFAULT_DOMAIN_NAME.to_string(),
-                Domain::new(DEFAULT_DOMAIN_NAME),
-            )])),
+            domains: Mutex::new(HashMap::new()),
         }
     }
 }
@@ -67,10 +62,10 @@ impl Default for NvtxLayer {
 /// Data modeling [`EventAttributes`] without the need for lifetime management.
 #[derive(Debug, Clone, Default)]
 struct NvtxData {
-    domain: Option<String>,
+    domain: String,
     category: Option<String>,
     color: Option<Color>,
-    message: Option<String>,
+    message: String,
     payload: Option<Payload>,
 }
 
@@ -81,9 +76,7 @@ impl NvtxData {
         if let Some(c) = &self.category {
             builder = builder.category_name(c.clone());
         }
-        if let Some(s) = &self.message {
-            builder = builder.message(s.clone());
-        }
+        builder = builder.message(self.message.clone());
         if let Some(c) = &self.color {
             builder = builder.color(*c);
         }
@@ -111,7 +104,7 @@ where
         let mut data = NvtxData::default();
         let mut visitor = NvtxVisitor::<'_, S>::new(&mut data);
         event.record(&mut visitor);
-
+        data.message = event.metadata().name().into();
         domain.mark(data.event_attributes(domain));
     }
 
@@ -120,8 +113,8 @@ where
         let mut data = NvtxData::default();
         let mut visitor = NvtxVisitor::<'_, S>::new(&mut data);
         attrs.record(&mut visitor);
-        data.domain = Some(attrs.metadata().target().to_string());
-        data.message = Some(attrs.metadata().name().to_string());
+        data.domain = attrs.metadata().target().into();
+        data.message = attrs.metadata().name().to_string();
         span.extensions_mut().insert(data);
     }
 
@@ -138,14 +131,11 @@ where
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
         let mut range_id: Option<u64> = None;
         if let Some(data) = ctx.span(id).unwrap().extensions().get::<NvtxData>() {
-            let domain_name = &data
-                .domain
-                .clone()
-                .unwrap_or_else(|| DEFAULT_DOMAIN_NAME.to_string());
+            let domain_name = data.domain.clone();
             let mut lock = self.domains.lock().unwrap();
             let domain = lock
                 .entry(domain_name.clone())
-                .or_insert_with(|| Domain::new(domain_name.to_string()));
+                .or_insert_with(|| Domain::new(domain_name));
 
             range_id = Some(domain.range_start(data.event_attributes(domain)));
         };
@@ -156,11 +146,8 @@ where
 
     fn on_exit(&self, id: &Id, ctx: Context<'_, S>) {
         let span = ctx.span(id).unwrap();
-        let maybe_data = span.extensions_mut().remove::<NvtxData>();
-        let domain_name = maybe_data
-            .map(|data| data.domain)
-            .unwrap()
-            .unwrap_or_else(|| DEFAULT_DOMAIN_NAME.to_string());
+        let data = span.extensions_mut().remove::<NvtxData>().unwrap();
+        let domain_name = data.domain;
         let mut lock = self.domains.lock().unwrap();
         let domain = lock
             .entry(domain_name.clone())
@@ -227,12 +214,6 @@ where
                 if let Ok([r, g, b]) = color_name::Color::val().by_string(owned) {
                     self.data.color = Some(Color::new(r, g, b, 255));
                 }
-            }
-            "message" => {
-                self.data.message = Some(owned);
-            }
-            "target" => {
-                self.data.domain = Some(owned);
             }
             "category" => {
                 self.data.category = Some(owned);

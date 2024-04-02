@@ -34,11 +34,13 @@ fn main() {
         category = "B",
     );
 
-    let _r = info_span!(
+    info_span!(
         target: "Domain2",
         "At the beginning of the program",
         color = "blue",
         category = "B",
-    );
-    foo(10);
+    )
+    .in_scope(|| {
+        foo(10);
+    });
 }
