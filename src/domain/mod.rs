@@ -1,7 +1,11 @@
 use crate::{Str, TypeValueEncodable};
 use std::{
+    collections::HashMap,
     marker::PhantomData,
-    sync::atomic::{AtomicU32, Ordering},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Mutex,
+    },
 };
 
 mod category;
@@ -45,6 +49,8 @@ pub mod sync;
 pub struct Domain {
     handle: nvtx_sys::DomainHandle,
     registered_categories: AtomicU32,
+    strings: Mutex<HashMap<String, nvtx_sys::StringHandle>>,
+    categories: Mutex<HashMap<String, u32>>,
 }
 
 impl Domain {
@@ -62,6 +68,8 @@ impl Domain {
                 Str::Unicode(s) => nvtx_sys::domain_create_unicode(&s),
             },
             registered_categories: AtomicU32::new(0),
+            strings: Mutex::new(HashMap::default()),
+            categories: Mutex::new(HashMap::default()),
         }
     }
 
@@ -94,11 +102,22 @@ impl Domain {
     /// let my_str = domain.register_string("My immutable string");
     /// ```
     pub fn register_string(&self, string: impl Into<Str>) -> RegisteredString<'_> {
-        RegisteredString {
-            handle: match string.into() {
+        let into_string: Str = string.into();
+        let owned_string = match &into_string {
+            Str::Ascii(s) => s.to_str().unwrap().to_string(),
+            Str::Unicode(s) => s.to_string().unwrap(),
+        };
+        let handle = *self
+            .strings
+            .lock()
+            .unwrap()
+            .entry(owned_string)
+            .or_insert_with(|| match into_string {
                 Str::Ascii(s) => nvtx_sys::domain_register_string_ascii(self.handle, &s),
                 Str::Unicode(s) => nvtx_sys::domain_register_string_unicode(self.handle, &s),
-            },
+            });
+        RegisteredString {
+            handle,
             domain: self,
         }
     }
@@ -133,11 +152,25 @@ impl Domain {
     /// let cat = domain.register_category("Category");
     /// ```
     pub fn register_category(&self, name: impl Into<Str>) -> Category<'_> {
-        let id = 1 + self.registered_categories.fetch_add(1, Ordering::SeqCst);
-        match name.into() {
-            Str::Ascii(s) => nvtx_sys::domain_name_category_ascii(self.handle, id, &s),
-            Str::Unicode(s) => nvtx_sys::domain_name_category_unicode(self.handle, id, &s),
-        }
+        let into_name: Str = name.into();
+        let owned_name = match &into_name {
+            Str::Ascii(s) => s.to_str().unwrap().to_string(),
+            Str::Unicode(s) => s.to_string().unwrap(),
+        };
+
+        let id = *self
+            .categories
+            .lock()
+            .unwrap()
+            .entry(owned_name)
+            .or_insert_with(|| {
+                let id = 1 + self.registered_categories.fetch_add(1, Ordering::SeqCst);
+                match into_name {
+                    Str::Ascii(s) => nvtx_sys::domain_name_category_ascii(self.handle, id, &s),
+                    Str::Unicode(s) => nvtx_sys::domain_name_category_unicode(self.handle, id, &s),
+                }
+                id
+            });
         Category { id, domain: self }
     }
 
@@ -179,7 +212,7 @@ impl Domain {
     ///     .build());
     ///
     /// let reg_str = domain.register_string("Registered String");
-    /// domain.mark(&reg_str);
+    /// domain.mark(reg_str.clone());
     /// ```
     pub fn mark<'a>(&'a self, arg: impl Into<EventArgument<'a>>) {
         let attribute: EventAttributes<'a> = match arg.into() {

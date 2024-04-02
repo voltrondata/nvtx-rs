@@ -15,11 +15,11 @@ pub enum Message<'a> {
     /// An owned Unicode string.
     Unicode(WideCString),
     /// A registered string handle belonging to a domain.
-    Registered(&'a RegisteredString<'a>),
+    Registered(RegisteredString<'a>),
 }
 
-impl<'a> From<&'a RegisteredString<'a>> for Message<'a> {
-    fn from(v: &'a RegisteredString) -> Self {
+impl<'a> From<RegisteredString<'a>> for Message<'a> {
+    fn from(v: RegisteredString<'a>) -> Self {
         Self::Registered(v)
     }
 }

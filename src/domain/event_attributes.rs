@@ -1,5 +1,5 @@
 use super::{Category, Message};
-use crate::{Color, Domain, Payload, TypeValueEncodable};
+use crate::{Color, Domain, Payload, Str, TypeValueEncodable};
 
 /// All attributes that are associated with marks and ranges.
 #[derive(Debug, Clone, Default)]
@@ -69,7 +69,7 @@ impl<'a, T: Into<Message<'a>>> From<T> for EventAttributes<'a> {
 #[derive(Debug, Clone)]
 pub struct EventAttributesBuilder<'a> {
     pub(super) domain: &'a Domain,
-    pub(super) category: Option<&'a Category<'a>>,
+    pub(super) category: Option<Category<'a>>,
     pub(super) color: Option<Color>,
     pub(super) payload: Option<Payload>,
     pub(super) message: Option<Message<'a>>,
@@ -85,14 +85,28 @@ impl<'a> EventAttributesBuilder<'a> {
     /// // ...
     /// let builder = domain.event_attributes_builder();
     /// // ...
-    /// let builder = builder.category(&cat);
+    /// let builder = builder.category(cat.clone());
     /// ```
-    pub fn category(mut self, category: &'a Category<'a>) -> EventAttributesBuilder<'a> {
+    pub fn category(mut self, category: Category<'a>) -> EventAttributesBuilder<'a> {
         assert!(
             std::ptr::eq(category.domain, self.domain),
             "Builder's Domain differs from Category's Domain"
         );
         self.category = Some(category);
+        self
+    }
+    /// Update the attribute's category. An assertion will be thrown if a Category is
+    /// passed in whose domain is not the same as this builder.
+    ///
+    /// ```
+    /// let domain = nvtx::Domain::new("Domain");
+    /// // ...
+    /// let builder = domain.event_attributes_builder();
+    /// // ...
+    /// let builder = builder.category_name("Category2");
+    /// ```
+    pub fn category_name(mut self, name: impl Into<Str>) -> EventAttributesBuilder<'a> {
+        self.category = Some(self.domain.register_category(name));
         self
     }
 
@@ -133,14 +147,17 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let builder = builder.message("test");
     /// ```
     pub fn message(mut self, message: impl Into<Message<'a>>) -> EventAttributesBuilder<'a> {
-        let msg: Message = message.into();
-        if let Message::Registered(r) = &msg {
-            assert!(
-                std::ptr::eq(r.domain, self.domain),
-                "Builder's Domain differs from domain::RegisteredString's Domain"
-            )
-        }
-        self.message = Some(msg);
+        // implementation optimization: always prefer registered strings
+        let msg = match message.into() {
+            Message::Ascii(s) => self.domain.register_string(s.to_str().unwrap().to_string()),
+            Message::Unicode(s) => self.domain.register_string(s.to_string().unwrap()),
+            Message::Registered(r) => r,
+        };
+        assert!(
+            std::ptr::eq(msg.domain, self.domain),
+            "Builder's Domain differs from domain::RegisteredString's Domain"
+        );
+        self.message = Some(Message::Registered(msg));
         self
     }
 
@@ -152,13 +169,13 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let attr = domain.event_attributes_builder()
     ///                 .message("Example Range")
     ///                 .color([224, 192, 128])
-    ///                 .category(&cat)
+    ///                 .category(cat.clone())
     ///                 .payload(1234567)
     ///                 .build();
     /// ```
     pub fn build(self) -> EventAttributes<'a> {
         EventAttributes {
-            category: self.category.copied(),
+            category: self.category,
             color: self.color,
             payload: self.payload,
             message: self.message,

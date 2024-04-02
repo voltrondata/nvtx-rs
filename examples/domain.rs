@@ -10,9 +10,9 @@ fn main() {
     let r1 = domain.range(
         domain
             .event_attributes_builder()
-            .category(&a)
+            .category(a.clone())
             .color(nvtx::color::olive)
-            .message(&alpha)
+            .message(alpha.clone())
             .build(),
     );
 
@@ -33,18 +33,18 @@ fn main() {
     let r2 = domain.range(
         domain
             .event_attributes_builder()
-            .category(&a)
+            .category(a.clone())
             .color(nvtx::color::olive)
-            .message(&beta)
+            .message(beta.clone())
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
     let r3 = domain.range(
         domain
             .event_attributes_builder()
-            .category(&a)
+            .category(a.clone())
             .color(nvtx::color::olive)
-            .message(&gamma)
+            .message(gamma.clone())
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
@@ -58,27 +58,27 @@ fn main() {
     let p1 = d2.range(
         domain
             .event_attributes_builder()
-            .category(&b)
+            .category(b.clone())
             .color(nvtx::color::orangered)
-            .message(&alpha)
+            .message(alpha.clone())
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
     let p2 = d2.range(
         domain
             .event_attributes_builder()
-            .category(&b)
+            .category(b.clone())
             .color(nvtx::color::orangered)
-            .message(&beta)
+            .message(beta.clone())
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));
     let p3 = d2.range(
         domain
             .event_attributes_builder()
-            .category(&b)
+            .category(b.clone())
             .color(nvtx::color::orangered)
-            .message(&gamma)
+            .message(gamma.clone())
             .build(),
     );
     thread::sleep(time::Duration::from_millis(10));

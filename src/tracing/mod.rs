@@ -1,8 +1,5 @@
-use crate::{
-    domain::{Category, EventAttributes, Message},
-    Color, Domain, Payload, Str,
-};
-use std::marker::PhantomData;
+use crate::{Color, Domain, Payload};
+use std::{collections::HashMap, marker::PhantomData, sync::Mutex};
 use tracing::{
     field::{Field, Visit},
     span::{Attributes, Id, Record},
@@ -11,25 +8,20 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
 /// The tracing layer for nvtx range and events.
 ///
-/// Only a subset of nvtx domain features are available.
-///
-/// Unavailable functionality:
-/// - registering strings for efficient reuse
-/// - registering names for categories
-///
 /// **Supported fields**
-/// * `message` (`&str`) for Marks only -- the span name is used as the message for Spans
+/// * `domain` (`&str`) indicates a domain name (the default is `"NVTX"`)
+/// * `category` (`&str`) provides a category within a domain (or the default domain)
 /// * `color` (`&str`) -- the valid names align the names provided by the color names
 ///   defined within [`crate::color`]
-/// * `payload` (one of: `f64`, `u64`, `i64`)
-/// * `category` (`u32`) provides a numerical category
+/// * `payload` (one of: `f64`, `u64`, `i64`, or `bool`)
+/// * `message` (`&str`) for Marks only -- the span name is used as the message for Spans
 ///
 /// `instrument` example:
 ///
 /// ```
 /// use tracing::instrument;
 ///
-/// #[instrument(fields(color = "salmon", category = 2, payload = k))]
+/// #[instrument(fields(color = "salmon", category = "cool", payload = k))]
 /// fn baz (k : u64) {
 ///     std::thread::sleep(std::time::Duration::from_millis(10 * k));
 /// }
@@ -40,7 +32,7 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 /// ```
 /// use tracing::info;
 ///
-/// info!(message = "At the beginning of the program", color = "blue", category = 2);
+/// info!(message = "At the beginning of the program", color = "blue", domain = "test");
 /// ```
 ///
 /// `span` example:
@@ -54,30 +46,31 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 /// });
 /// ```
 pub struct NvtxLayer {
-    /// The held domain of the layer.
-    domain: crate::Domain,
+    /// The held domains of the layer.
+    domains: Mutex<HashMap<String, crate::Domain>>,
 }
 
-impl NvtxLayer {
-    /// Create a new layer with a given domain name.
-    pub fn new(name: impl Into<Str>) -> NvtxLayer {
-        NvtxLayer {
-            domain: Domain::new(name),
-        }
-    }
+static DEFAULT_DOMAIN_NAME: &str = "NVTX";
 
-    /// Get the layer's domain.
-    pub fn get_domain(&self) -> &Domain {
-        &self.domain
+impl Default for NvtxLayer {
+    /// Create a new layer with a given domain name.
+    fn default() -> NvtxLayer {
+        NvtxLayer {
+            domains: Mutex::new(HashMap::from([(
+                DEFAULT_DOMAIN_NAME.to_string(),
+                Domain::new(DEFAULT_DOMAIN_NAME),
+            )])),
+        }
     }
 }
 
 /// Data modeling [`EventAttributes`] without the need for lifetime management.
 #[derive(Debug, Clone, Default)]
 struct NvtxData {
+    domain: Option<String>,
+    category: Option<String>,
     message: Option<String>,
     color: Option<Color>,
-    category: Option<u32>,
     payload: Option<Payload>,
 }
 
@@ -92,16 +85,27 @@ where
         let mut data = NvtxData::default();
         let mut visitor = NvtxVisitor::<'_, S>::new(&mut data);
         event.record(&mut visitor);
-        let attr = EventAttributes {
-            message: data.message.as_ref().map(|s| Message::from(s.clone())),
-            category: data.category.map(|c| Category {
-                id: c,
-                domain: &self.domain,
-            }),
-            color: data.color,
-            payload: data.payload,
-        };
-        self.domain.mark(attr);
+        let domain_name = data
+            .domain
+            .unwrap_or_else(|| DEFAULT_DOMAIN_NAME.to_string());
+        let mut lock = self.domains.lock().unwrap();
+        let domain = lock
+            .entry(domain_name.clone())
+            .or_insert_with(|| Domain::new(domain_name));
+        let mut builder = domain.event_attributes_builder();
+        if let Some(c) = data.category {
+            builder = builder.category_name(c);
+        }
+        if let Some(s) = data.message {
+            builder = builder.message(s);
+        }
+        if let Some(c) = data.color {
+            builder = builder.color(c);
+        }
+        if let Some(p) = data.payload {
+            builder = builder.payload(p);
+        }
+        domain.mark(builder.build());
     }
 
     fn on_new_span<'a>(&'a self, attrs: &Attributes<'a>, id: &Id, ctx: Context<'a, S>) {
@@ -124,28 +128,51 @@ where
     }
 
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
+        let mut range_id: Option<u64> = None;
         if let Some(data) = ctx.span(id).unwrap().extensions().get::<NvtxData>() {
-            let attr = EventAttributes {
-                message: data.message.as_ref().map(|s| Message::from(s.clone())),
-                category: data.category.map(|c| Category {
-                    id: c,
-                    domain: &self.domain,
-                }),
-                color: data.color,
-                payload: data.payload,
-            };
-            ctx.span(id)
-                .unwrap()
-                .extensions_mut()
-                .insert(NvtxId(self.domain.range_start(attr)));
+            let domain_name = &data
+                .domain
+                .clone()
+                .unwrap_or_else(|| DEFAULT_DOMAIN_NAME.to_string());
+            let mut lock = self.domains.lock().unwrap();
+            let domain = lock
+                .entry(domain_name.clone())
+                .or_insert_with(|| Domain::new(domain_name.to_string()));
+            let mut builder = domain.event_attributes_builder();
+            if let Some(c) = &data.category {
+                builder = builder.category_name(c.to_string());
+            }
+            if let Some(s) = &data.message {
+                builder = builder.message(s.to_string());
+            }
+            if let Some(c) = data.color {
+                builder = builder.color(c);
+            }
+            if let Some(p) = data.payload {
+                builder = builder.payload(p);
+            }
+            range_id = Some(domain.range_start(builder.build()));
+        };
+        if let Some(range) = range_id {
+            ctx.span(id).unwrap().extensions_mut().insert(NvtxId(range));
         }
     }
 
     fn on_exit(&self, id: &Id, ctx: Context<'_, S>) {
         let span = ctx.span(id).unwrap();
+        let maybe_data = span.extensions_mut().remove::<NvtxData>();
+        let domain_name = maybe_data
+            .map(|data| data.domain)
+            .unwrap()
+            .unwrap_or_else(|| DEFAULT_DOMAIN_NAME.to_string());
+        let mut lock = self.domains.lock().unwrap();
+        let domain = lock
+            .entry(domain_name.clone())
+            .or_insert_with(|| Domain::new(domain_name));
+
         let maybe_id = span.extensions_mut().remove::<NvtxId>();
         if let Some(NvtxId(id)) = maybe_id {
-            self.domain.range_end(id)
+            domain.range_end(id)
         }
     }
 }
@@ -185,15 +212,11 @@ where
     fn record_i64(&mut self, field: &Field, value: i64) {
         if field.name() == "payload" {
             self.data.payload = Some(Payload::Int64(value));
-        } else if field.name() == "category" {
-            self.data.category = Some(value as u32);
         }
     }
     fn record_u64(&mut self, field: &Field, value: u64) {
         if field.name() == "payload" {
             self.data.payload = Some(Payload::Uint64(value));
-        } else if field.name() == "category" {
-            self.data.category = Some(value as u32);
         }
     }
     fn record_bool(&mut self, field: &Field, value: bool) {
@@ -202,12 +225,23 @@ where
         }
     }
     fn record_str(&mut self, field: &Field, value: &str) {
-        if field.name() == "color" {
-            if let Ok([r, g, b]) = color_name::Color::val().by_string(value.to_string()) {
-                self.data.color = Some(Color::new(r, g, b, 255));
+        let owned = value.to_string();
+        match field.name() {
+            "color" => {
+                if let Ok([r, g, b]) = color_name::Color::val().by_string(owned) {
+                    self.data.color = Some(Color::new(r, g, b, 255));
+                }
             }
-        } else if field.name() == "message" {
-            self.data.message = Some(value.to_string());
+            "message" => {
+                self.data.message = Some(owned);
+            }
+            "domain" => {
+                self.data.domain = Some(owned);
+            }
+            "category" => {
+                self.data.category = Some(owned);
+            }
+            _ => (),
         }
     }
 }
