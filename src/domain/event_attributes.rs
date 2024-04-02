@@ -93,11 +93,8 @@ impl<'a> EventAttributesBuilder<'a> {
     /// ```
     pub fn category(mut self, category: Category<'a>) -> EventAttributesBuilder<'a> {
         assert!(
-            std::ptr::eq(
-                std::ptr::addr_of!(*category.domain()),
-                std::ptr::addr_of!(*self.domain)
-            ),
-            "Builder's Domain differs from Category's Domain"
+            std::ptr::eq(category.domain(), self.domain),
+            "EventAttributesBuilder's Domain differs from Category's Domain"
         );
         self.category = Some(category);
         self
@@ -161,11 +158,8 @@ impl<'a> EventAttributesBuilder<'a> {
             Message::Registered(r) => r,
         };
         assert!(
-            std::ptr::eq(
-                std::ptr::addr_of!(*msg.domain()),
-                std::ptr::addr_of!(*self.domain)
-            ),
-            "Builder's Domain differs from RegisteredString's Domain"
+            std::ptr::eq(msg.domain(), self.domain),
+            "EventAttributesBuilder's Domain differs from RegisteredString's Domain"
         );
         self.message = Some(Message::Registered(msg));
         self
@@ -191,5 +185,86 @@ impl<'a> EventAttributesBuilder<'a> {
             payload: self.payload,
             message: self.message,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::domain::Domain;
+
+    #[test]
+    #[should_panic(expected = "EventAttributes' Domain does not match current Domain")]
+    fn test_unowned_category_panic_mark() {
+        let d1 = Domain::new("Domain1");
+        let c1 = d1.register_category("category");
+        let d2 = Domain::new("Domain2");
+        d2.mark(d1.event_attributes_builder().category(c1).build());
+    }
+
+    #[test]
+    #[should_panic(expected = "EventAttributesBuilder's Domain differs from Category's Domain")]
+    fn test_unowned_category_panic_in_builder_mark() {
+        let d1 = Domain::new("Domain1");
+        let c1 = d1.register_category("category");
+        let d2 = Domain::new("Domain2");
+        d2.mark(d2.event_attributes_builder().category(c1).build());
+    }
+
+    #[test]
+    #[should_panic(expected = "EventAttributes' Domain does not match current Domain")]
+    fn test_unowned_category_panic_range() {
+        let d1 = Domain::new("Domain1");
+        let c1 = d1.register_category("category");
+        let d2 = Domain::new("Domain2");
+        d2.range(d1.event_attributes_builder().category(c1).build());
+    }
+
+    #[test]
+    #[should_panic(expected = "EventAttributesBuilder's Domain differs from Category's Domain")]
+    fn test_unowned_category_panic_in_builder_range() {
+        let d1 = Domain::new("Domain1");
+        let c1 = d1.register_category("category");
+        let d2 = Domain::new("Domain2");
+        d2.range(d2.event_attributes_builder().category(c1).build());
+    }
+
+    #[test]
+    #[should_panic(expected = "EventAttributes' Domain does not match current Domain")]
+    fn test_unowned_string_panic_mark() {
+        let d1 = Domain::new("Domain1");
+        let s1 = d1.register_string("test string");
+        let d2 = Domain::new("Domain2");
+        d2.mark(d1.event_attributes_builder().message(s1).build());
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "EventAttributesBuilder's Domain differs from RegisteredString's Domain"
+    )]
+    fn test_unowned_string_panic_in_builder_mark() {
+        let d1 = Domain::new("Domain1");
+        let s1 = d1.register_string("test string");
+        let d2 = Domain::new("Domain2");
+        d2.mark(d2.event_attributes_builder().message(s1).build());
+    }
+
+    #[test]
+    #[should_panic(expected = "EventAttributes' Domain does not match current Domain")]
+    fn test_unowned_string_panic_range() {
+        let d1 = Domain::new("Domain1");
+        let s1 = d1.register_string("test string");
+        let d2 = Domain::new("Domain2");
+        d2.range(d1.event_attributes_builder().message(s1).build());
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "EventAttributesBuilder's Domain differs from RegisteredString's Domain"
+    )]
+    fn test_unowned_string_panic_in_builder_range() {
+        let d1 = Domain::new("Domain1");
+        let s1 = d1.register_string("test string");
+        let d2 = Domain::new("Domain2");
+        d2.range(d2.event_attributes_builder().message(s1).build());
     }
 }

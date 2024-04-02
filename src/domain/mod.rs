@@ -216,8 +216,11 @@ impl Domain {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => m.into(),
         };
-        if let Some(domain) = &attribute.domain {
-            assert!(std::ptr::eq(*domain, self), "attribute's domain invalid");
+        if let Some(domain) = attribute.domain {
+            assert!(
+                std::ptr::eq(domain, self),
+                "EventAttributes' Domain does not match current Domain"
+            );
         }
         let encoded = attribute.encode();
         nvtx_sys::domain_mark_ex(self.handle, &encoded)
@@ -283,8 +286,11 @@ impl Domain {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => m.into(),
         };
-        if let Some(domain) = &arg.domain {
-            assert!(std::ptr::eq(*domain, self), "attribute's domain invalid");
+        if let Some(domain) = arg.domain {
+            assert!(
+                std::ptr::eq(domain, self),
+                "EventAttributes' Domain does not match current Domain"
+            );
         }
         nvtx_sys::domain_range_start_ex(self.handle, &arg.encode())
     }
