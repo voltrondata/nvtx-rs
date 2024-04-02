@@ -27,6 +27,21 @@ impl From<[u8; 3]> for Color {
     }
 }
 
+/// Convert from u32 (hex) to Color
+///
+/// If the most-significant (BE) byte is 00, then treat the value as RGB
+/// Else the most-significant (BE) byte represents the alpha channel (ARGB)
+impl From<u32> for Color {
+    fn from(value: u32) -> Self {
+        let [a, r, g, b] = value.to_be_bytes();
+        if value & 0xFFFFFF == value {
+            Color { a: 255, r, g, b }
+        } else {
+            Color { a, r, g, b }
+        }
+    }
+}
+
 impl Color {
     /// Create a new color from specified channels
     ///

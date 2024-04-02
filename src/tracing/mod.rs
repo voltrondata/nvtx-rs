@@ -199,15 +199,9 @@ where
         if field.name() == "payload" {
             self.data.payload = Some(Payload::Int64(value));
         } else if field.name() == "color" {
-            let [a, r, g, b] = (value as u32).to_be_bytes();
-            if value & 0xFFFFFF == value {
-                // RGB
-                self.data.color = Some(Color::new(r, g, b, 255));
-            } else if value & 0xFFFFFFFF == value {
-                // ARGB
-                self.data.color = Some(Color::new(r, g, b, a));
-            } else {
-                panic!("Invalid color literal specified");
+            let masked_value = value & 0xFFFFFFFF;
+            if value == masked_value {
+                self.data.color = Some((value as u32).into())
             }
         }
     }
@@ -215,15 +209,9 @@ where
         if field.name() == "payload" {
             self.data.payload = Some(Payload::Uint64(value));
         } else if field.name() == "color" {
-            let [a, r, g, b] = (value as u32).to_be_bytes();
-            if value & 0xFFFFFF == value {
-                // RGB
-                self.data.color = Some(Color::new(r, g, b, 255));
-            } else if value & 0xFFFFFFFF == value {
-                // ARGB
-                self.data.color = Some(Color::new(r, g, b, a));
-            } else {
-                panic!("Invalid color literal specified");
+            let masked_value = value & 0xFFFFFFFF;
+            if value == masked_value {
+                self.data.color = Some((value as u32).into())
             }
         }
     }
