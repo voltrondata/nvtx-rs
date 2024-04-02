@@ -1,7 +1,7 @@
 use tracing::{info, info_span, instrument};
 use tracing_subscriber::prelude::*;
 
-#[instrument(target = "Domain1", fields(color = "goldenrod", category = "A", payload = i))]
+#[instrument(target = "Domain1", fields(color = 0xFFDD22, category = "A", payload = i))]
 fn foo(i: u64) {
     for j in 1..=i {
         bar(j);
@@ -9,7 +9,7 @@ fn foo(i: u64) {
     }
 }
 
-#[instrument(target = "Domain1", fields(color = "plum", category = "B", payload = j))]
+#[instrument(target = "Domain1", fields(color = 0x880099FF_u32, category = "B", payload = j))]
 fn bar(j: u64) {
     for k in 1..=j {
         baz(k);
@@ -37,7 +37,7 @@ fn main() {
     info_span!(
         target: "Domain2",
         "At the beginning of the program",
-        color = "blue",
+        color = 0x0099FF,
         category = "B",
     )
     .in_scope(|| {

@@ -11,19 +11,22 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 ///
 /// **Supported fields**
 /// * `category` (`&str`) provides a category within the target.
-/// * `color` (`&str`) -- the valid names align the names provided by the color names
-///   defined within [`crate::color`].
-/// * `payload` (one of: `f64`, `u64`, `i64`, or `bool`) -- an additional value to track.
+/// * `color`
+///   * `&str` -- the valid names align the names provided by the color names
+///     defined within [`crate::color`].
+///   * `i32` -- a valid hex RGB value (masked with `0xFFFFFF`)
+///   * `u32` -- a valid hex ARGB value (masked with `0xFFFFFFFF`)
+/// * `payload` (one of: `{i,u,f}{32,64}` or `bool`) -- an additional value to track.
 ///
 /// **Supported built-ins**
-/// * the **target** (`&str`) indicates a domain name
-/// * the **name** (`&str`) specifies the text for the Mark or Range.
+/// * the **target** indicates a domain name
+/// * the **name** specifies the text for the Mark or Range.
 ///
 /// ### `instrument` example:
 ///
 /// ```
 /// use tracing::instrument;
-/// #[instrument(target = "domain", fields(color = "salmon", category = "cool", payload = k))]
+/// #[instrument(target = "domain", fields(color = 0xDDAA33, category = "cool", payload = k))]
 /// fn baz (k : u64) {
 ///     std::thread::sleep(std::time::Duration::from_millis(10 * k));
 /// }
@@ -195,11 +198,33 @@ where
     fn record_i64(&mut self, field: &Field, value: i64) {
         if field.name() == "payload" {
             self.data.payload = Some(Payload::Int64(value));
+        } else if field.name() == "color" {
+            let [a, r, g, b] = (value as u32).to_be_bytes();
+            if value & 0xFFFFFF == value {
+                // RGB
+                self.data.color = Some(Color::new(r, g, b, 255));
+            } else if value & 0xFFFFFFFF == value {
+                // ARGB
+                self.data.color = Some(Color::new(r, g, b, a));
+            } else {
+                panic!("Invalid color literal specified");
+            }
         }
     }
     fn record_u64(&mut self, field: &Field, value: u64) {
         if field.name() == "payload" {
             self.data.payload = Some(Payload::Uint64(value));
+        } else if field.name() == "color" {
+            let [a, r, g, b] = (value as u32).to_be_bytes();
+            if value & 0xFFFFFF == value {
+                // RGB
+                self.data.color = Some(Color::new(r, g, b, 255));
+            } else if value & 0xFFFFFFFF == value {
+                // ARGB
+                self.data.color = Some(Color::new(r, g, b, a));
+            } else {
+                panic!("Invalid color literal specified");
+            }
         }
     }
     fn record_bool(&mut self, field: &Field, value: bool) {
