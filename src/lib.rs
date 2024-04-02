@@ -203,3 +203,20 @@ pub fn register_category(name: impl Into<Str>) -> Category {
 pub fn register_categories<const C: usize>(names: [impl Into<Str>; C]) -> [Category; C] {
     names.map(register_category)
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn register_category() {
+        let cat1 = crate::register_category("category 1");
+        let cat2 = crate::register_category("category 2");
+        assert_ne!(cat1, cat2);
+    }
+
+    #[test]
+    fn register_categories() {
+        let [cat1, cat2] = crate::register_categories(["category 1", "category 2"]);
+        assert_ne!(cat1, cat2);
+    }
+}

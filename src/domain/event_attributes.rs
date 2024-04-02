@@ -190,7 +190,64 @@ impl<'a> EventAttributesBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::Domain;
+    use crate::{
+        domain::{Domain, Message},
+        Color, Payload,
+    };
+
+    #[test]
+    fn test_builder_color() {
+        let d = Domain::new("d");
+        let builder = d.event_attributes_builder();
+        let color = Color::new(0x11, 0x22, 0x44, 0x88);
+        let attr = builder.color(color).build();
+        assert!(matches!(attr.color, Some(c) if c == color));
+    }
+
+    #[test]
+    fn test_builder_category() {
+        let d = Domain::new("d");
+        let cat = d.register_category("cat");
+        let builder = d.event_attributes_builder();
+        let attr = builder.category(cat).build();
+        assert!(matches!(attr.category, Some(c) if c == cat));
+    }
+
+    #[test]
+    fn test_builder_category_name() {
+        let d = Domain::new("d");
+        let builder = d.event_attributes_builder();
+        let attr = builder.category_name("cat").build();
+        let cat = d.register_category("cat");
+        assert!(matches!(attr.category, Some(c) if c == cat));
+    }
+
+    #[test]
+    fn test_builder_payload() {
+        let d = Domain::new("d");
+        let builder = d.event_attributes_builder();
+        let attr = builder.clone().payload(1_i32).build();
+        assert!(matches!(attr.payload, Some(Payload::Int32(i)) if i == 1_i32));
+        let attr = builder.clone().payload(2_u32).build();
+        assert!(matches!(attr.payload, Some(Payload::Uint32(i)) if i == 2_u32));
+        let attr = builder.clone().payload(1_i64).build();
+        assert!(matches!(attr.payload, Some(Payload::Int64(i)) if i == 1_i64));
+        let attr = builder.clone().payload(2_u64).build();
+        assert!(matches!(attr.payload, Some(Payload::Uint64(i)) if i == 2_u64));
+        let attr = builder.clone().payload(1.0_f32).build();
+        assert!(matches!(attr.payload, Some(Payload::Float(i)) if i == 1.0_f32));
+        let attr = builder.clone().payload(2.0_f64).build();
+        assert!(matches!(attr.payload, Some(Payload::Double(i)) if i == 2.0_f64));
+    }
+
+    #[test]
+    fn test_builder_message() {
+        let d = Domain::new("d");
+        let builder = d.event_attributes_builder();
+        let attr = builder.message("This is a message").build();
+        let registered = d.register_string("This is a message");
+        assert!(matches!(attr.message, Some(Message::Registered(r)) if r == registered));
+    }
 
     #[test]
     #[should_panic(expected = "EventAttributes' Domain does not match current Domain")]

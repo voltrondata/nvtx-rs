@@ -9,6 +9,14 @@ pub struct Category<'a> {
     domain: &'a Domain,
 }
 
+impl<'a> PartialEq for Category<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && std::ptr::eq(self.domain, other.domain)
+    }
+}
+
+impl<'a> Eq for Category<'a> {}
+
 impl<'a> Category<'a> {
     pub(super) fn new(id: u32, domain: &'a Domain) -> Category<'a> {
         Category { id, domain }

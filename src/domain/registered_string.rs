@@ -6,12 +6,31 @@ use crate::Domain;
 #[derive(Debug, Clone, Copy)]
 pub struct RegisteredString<'a> {
     handle: nvtx_sys::StringHandle,
+    uid: u32,
     domain: &'a Domain,
 }
 
+impl<'a> PartialEq for RegisteredString<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.handle == other.handle
+            && self.uid == other.uid
+            && std::ptr::eq(self.domain, other.domain)
+    }
+}
+
+impl<'a> Eq for RegisteredString<'a> {}
+
 impl<'a> RegisteredString<'a> {
-    pub(super) fn new(handle: nvtx_sys::StringHandle, domain: &'a Domain) -> RegisteredString<'a> {
-        RegisteredString { handle, domain }
+    pub(super) fn new(
+        handle: nvtx_sys::StringHandle,
+        uid: u32,
+        domain: &'a Domain,
+    ) -> RegisteredString<'a> {
+        RegisteredString {
+            handle,
+            uid,
+            domain,
+        }
     }
 
     pub(super) fn handle(&self) -> nvtx_sys::StringHandle {

@@ -48,3 +48,93 @@ impl TypeValueEncodable for GenericIdentifier {
         Identifier::default_encoding()
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_identifier_pointer() {
+        let dummy = ();
+        let ptr = std::ptr::addr_of!(dummy) as *const std::os::raw::c_void;
+        let x = GenericIdentifier::Pointer(ptr);
+        let i = Identifier::from(x);
+        assert!(matches!(i, Identifier::Generic(GenericIdentifier::Pointer(p)) if p == ptr));
+    }
+
+    #[test]
+    fn test_identifier_handle() {
+        let val = 0xDEADBEEF01234567_u64;
+        let x = GenericIdentifier::Handle(val);
+        let i = Identifier::from(x);
+        assert!(matches!(i, Identifier::Generic(GenericIdentifier::Handle(v)) if v == val));
+    }
+
+    #[test]
+    fn test_identifier_native_thread() {
+        let val = 0xDEADBEEF01234567_u64;
+        let x = GenericIdentifier::NativeThread(val);
+        let i = Identifier::from(x);
+        assert!(matches!(i, Identifier::Generic(GenericIdentifier::NativeThread(v)) if v == val));
+    }
+
+    #[test]
+    fn test_identifier_posix_thread() {
+        let val = 0xDEADBEEF01234567_u64;
+        let x = GenericIdentifier::PosixThread(val);
+        let i = Identifier::from(x);
+        assert!(matches!(i, Identifier::Generic(GenericIdentifier::PosixThread(v)) if v == val));
+    }
+
+    #[test]
+    fn test_encode_pointer() {
+        let dummy = ();
+        let ptr = std::ptr::addr_of!(dummy) as *const std::os::raw::c_void;
+        let x = GenericIdentifier::Pointer(ptr);
+        let (t, v) = x.encode();
+        assert_eq!(t, nvtx_sys::resource_type::GENERIC_POINTER);
+        unsafe {
+            assert!(matches!(v, nvtx_sys::ResourceAttributesIdentifier { pValue: p } if p == ptr));
+        }
+    }
+
+    #[test]
+    fn test_encode_handle() {
+        let val = 0xDEADBEEF01234567_u64;
+        let x = GenericIdentifier::Handle(val);
+        let (t, v) = x.encode();
+        assert_eq!(t, nvtx_sys::resource_type::GENERIC_HANDLE);
+        unsafe {
+            assert!(
+                matches!(v, nvtx_sys::ResourceAttributesIdentifier { ullValue: v } if v == val)
+            );
+        }
+    }
+
+    #[test]
+    fn test_encode_native_thread() {
+        let val = 0xDEADBEEF01234567_u64;
+        let x = GenericIdentifier::NativeThread(val);
+        let (t, v) = x.encode();
+        assert_eq!(t, nvtx_sys::resource_type::GENERIC_THREAD_NATIVE);
+        unsafe {
+            assert!(
+                matches!(v, nvtx_sys::ResourceAttributesIdentifier { ullValue: v } if v == val)
+            );
+        }
+    }
+
+    #[test]
+    fn test_encode_posix_thread() {
+        let val = 0xDEADBEEF01234567_u64;
+        let x = GenericIdentifier::PosixThread(val);
+        let (t, v) = x.encode();
+        assert_eq!(t, nvtx_sys::resource_type::GENERIC_THREAD_POSIX);
+        unsafe {
+            assert!(
+                matches!(v, nvtx_sys::ResourceAttributesIdentifier { ullValue: v } if v == val)
+            );
+        }
+    }
+}

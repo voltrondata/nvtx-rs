@@ -48,8 +48,9 @@ pub mod sync;
 #[derive(Debug)]
 pub struct Domain {
     handle: nvtx_sys::DomainHandle,
+    registered_strings: AtomicU32,
     registered_categories: AtomicU32,
-    strings: Mutex<HashMap<String, nvtx_sys::StringHandle>>,
+    strings: Mutex<HashMap<String, (nvtx_sys::StringHandle, u32)>>,
     categories: Mutex<HashMap<String, u32>>,
 }
 
@@ -67,6 +68,7 @@ impl Domain {
                 Str::Ascii(s) => nvtx_sys::domain_create_ascii(&s),
                 Str::Unicode(s) => nvtx_sys::domain_create_unicode(&s),
             },
+            registered_strings: AtomicU32::new(0),
             registered_categories: AtomicU32::new(0),
             strings: Mutex::new(HashMap::default()),
             categories: Mutex::new(HashMap::default()),
@@ -107,16 +109,20 @@ impl Domain {
             Str::Ascii(s) => s.to_str().unwrap().to_string(),
             Str::Unicode(s) => s.to_string().unwrap(),
         };
-        let handle = *self
+        let (handle, uid) = *self
             .strings
             .lock()
             .unwrap()
             .entry(owned_string)
-            .or_insert_with(|| match into_string {
-                Str::Ascii(s) => nvtx_sys::domain_register_string_ascii(self.handle, &s),
-                Str::Unicode(s) => nvtx_sys::domain_register_string_unicode(self.handle, &s),
+            .or_insert_with(|| {
+                let id = 1 + self.registered_strings.fetch_add(1, Ordering::SeqCst);
+                let handle = match into_string {
+                    Str::Ascii(s) => nvtx_sys::domain_register_string_ascii(self.handle, &s),
+                    Str::Unicode(s) => nvtx_sys::domain_register_string_unicode(self.handle, &s),
+                };
+                (handle, id)
             });
-        RegisteredString::new(handle, self)
+        RegisteredString::new(handle, uid, self)
     }
 
     /// Register many immutable strings within the current domain.
@@ -359,5 +365,46 @@ impl Domain {
 impl Drop for Domain {
     fn drop(&mut self) {
         nvtx_sys::domain_destroy(self.handle)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register_string() {
+        let d = Domain::new("d");
+        let s1 = d.register_string("hello");
+        let s2 = d.register_string("hello2");
+        let s3 = d.register_string("hello");
+        assert_eq!(s1, s3);
+        assert_ne!(s1, s2);
+    }
+
+    #[test]
+    fn test_register_strings() {
+        let d = Domain::new("d");
+        let [s1, s2, s3] = d.register_strings(["hello", "hello2", "hello"]);
+        assert_eq!(s1, s3);
+        assert_ne!(s1, s2);
+    }
+
+    #[test]
+    fn test_register_category() {
+        let d = Domain::new("d");
+        let c1 = d.register_category("hello");
+        let c2 = d.register_category("hello2");
+        let c3 = d.register_category("hello");
+        assert_eq!(c1, c3);
+        assert_ne!(c1, c2);
+    }
+
+    #[test]
+    fn test_register_categories() {
+        let d = Domain::new("d");
+        let [c1, c2, c3] = d.register_categories(["hello", "hello2", "hello"]);
+        assert_eq!(c1, c3);
+        assert_ne!(c1, c2);
     }
 }

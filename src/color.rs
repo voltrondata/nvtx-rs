@@ -4,7 +4,7 @@ use crate::TypeValueEncodable;
 pub use color_name::colors::*;
 
 /// Represents a color in use for controlling appearance within NSight profilers.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
     /// alpha channel
     a: u8,
@@ -91,6 +91,26 @@ impl Color {
     pub fn with_blue(&self, b: u8) -> Self {
         Color { b, ..*self }
     }
+
+    /// Get the value of the alpha channel
+    pub fn alpha(&self) -> u8 {
+        self.a
+    }
+
+    /// Get the value of the red channel
+    pub fn red(&self) -> u8 {
+        self.r
+    }
+
+    /// Get the value of the green channel
+    pub fn green(&self) -> u8 {
+        self.g
+    }
+
+    /// Get the value of the blue channel
+    pub fn blue(&self) -> u8 {
+        self.b
+    }
 }
 
 impl TypeValueEncodable for Color {
@@ -104,5 +124,87 @@ impl TypeValueEncodable for Color {
 
     fn default_encoding() -> (Self::Type, Self::Value) {
         (Self::Type::NVTX_COLOR_UNKNOWN, 0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::TypeValueEncodable;
+
+    use super::Color;
+
+    #[test]
+    fn ctor() {
+        let color = Color::new(0xFF, 0xEE, 0xDD, 0xCC);
+        assert_eq!(color.a, 0xCC);
+        assert_eq!(color.r, 0xFF);
+        assert_eq!(color.g, 0xEE);
+        assert_eq!(color.b, 0xDD);
+    }
+
+    #[test]
+    fn accessors() {
+        let color = Color::new(0x12, 0x34, 0x56, 0x78);
+        assert_eq!(color.r, color.red());
+        assert_eq!(color.g, color.green());
+        assert_eq!(color.b, color.blue());
+        assert_eq!(color.a, color.alpha());
+    }
+
+    #[test]
+    fn from_u8_array() {
+        let arr: [u8; 3] = [0xAB, 0xCD, 0xEF];
+        let color = Color::from(arr);
+        assert_eq!(color.a, 0xFF);
+        assert_eq!(color.r, 0xAB);
+        assert_eq!(color.g, 0xCD);
+        assert_eq!(color.b, 0xEF);
+    }
+
+    #[test]
+    fn from_u32_mask_0xffffff() {
+        let color = Color::from(0xABCDEF);
+        assert_eq!(color.a, 0xFF);
+        assert_eq!(color.r, 0xAB);
+        assert_eq!(color.g, 0xCD);
+        assert_eq!(color.b, 0xEF);
+    }
+
+    #[test]
+    fn from_u32_mask_0xffffffff() {
+        let color = Color::from(0xFEDCBA98);
+        assert_eq!(color.a, 0xFE);
+        assert_eq!(color.r, 0xDC);
+        assert_eq!(color.g, 0xBA);
+        assert_eq!(color.b, 0x98);
+    }
+
+    #[test]
+    fn with() {
+        let black = Color::new(0, 0, 0, 0);
+        let red = Color::new(0xFF, 0, 0, 0);
+        let green = Color::new(0, 0xFF, 0, 0);
+        let blue = Color::new(0, 0, 0xFF, 0);
+        let transparent = Color::new(0, 0, 0, 0xFF);
+        assert_eq!(black.with_red(0xFF), red);
+        assert_eq!(black.with_green(0xFF), green);
+        assert_eq!(black.with_blue(0xFF), blue);
+        assert_eq!(black.with_alpha(0xFF), transparent);
+    }
+
+    #[test]
+    fn encode() {
+        let (r, g, b, a) = (0x12, 0x34, 0x56, 0x78);
+        let color = Color::new(r, g, b, a);
+        let (t, v) = color.encode();
+        assert_eq!(t, nvtx_sys::ColorType::NVTX_COLOR_ARGB);
+        assert_eq!(v, u32::from_be_bytes([a, r, g, b]));
+    }
+
+    #[test]
+    fn test_encode_default() {
+        let (t, v) = Color::default_encoding();
+        assert_eq!(t, nvtx_sys::ColorType::NVTX_COLOR_UNKNOWN);
+        assert_eq!(v, 0);
     }
 }
