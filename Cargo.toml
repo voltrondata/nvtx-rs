@@ -38,7 +38,7 @@ gettid = { version = "0.1.2", optional = true }
 nvtx-sys = { path = "crates/nvtx-sys" }
 tracing-core = { version = "0.1.32", optional = true }
 tracing-subscriber = { version = "0.3.18", optional = true }
-widestring = "1.0.2"
+widestring = "1.1.0"
 
 [dev-dependencies]
 tracing = { version = "0.1.40", features = ["attributes"] }
