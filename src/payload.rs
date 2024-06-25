@@ -109,40 +109,34 @@ mod tests {
 
     #[test]
     fn test_encode_i32() {
-        let p = Payload::Int32(std::i32::MAX);
+        let p = Payload::Int32(i32::MAX);
         let (t, v) = p.encode();
         assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_INT32);
-        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { iValue: v } if v == std::i32::MAX)) };
+        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { iValue: v } if v == i32::MAX)) };
     }
 
     #[test]
     fn test_encode_u32() {
-        let p = Payload::Uint32(std::u32::MAX);
+        let p = Payload::Uint32(u32::MAX);
         let (t, v) = p.encode();
         assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_UNSIGNED_INT32);
-        unsafe {
-            assert!(matches!(v, nvtx_sys::PayloadValue { uiValue: v } if v == std::u32::MAX))
-        };
+        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { uiValue: v } if v == u32::MAX)) };
     }
 
     #[test]
     fn test_encode_i64() {
-        let p = Payload::Int64(std::i64::MAX);
+        let p = Payload::Int64(i64::MAX);
         let (t, v) = p.encode();
         assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_INT64);
-        unsafe {
-            assert!(matches!(v, nvtx_sys::PayloadValue { llValue: v } if v == std::i64::MAX))
-        };
+        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { llValue: v } if v == i64::MAX)) };
     }
 
     #[test]
     fn test_encode_u64() {
-        let p = Payload::Uint64(std::u64::MAX);
+        let p = Payload::Uint64(u64::MAX);
         let (t, v) = p.encode();
         assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_UNSIGNED_INT64);
-        unsafe {
-            assert!(matches!(v, nvtx_sys::PayloadValue { ullValue: v } if v == std::u64::MAX))
-        };
+        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { ullValue: v } if v == u64::MAX)) };
     }
 
     #[test]
