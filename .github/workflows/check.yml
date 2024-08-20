@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - uses: dtolnay/rust-toolchain@1.70.0
+      - uses: dtolnay/rust-toolchain@1.77.0
         id: toolchain
       - uses: actions/cache@v4
         with:

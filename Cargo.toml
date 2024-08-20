@@ -5,7 +5,7 @@ members = ["crates/nvtx-sys"]
 version = "0.1.0"
 authors = ["Voltron Data"]
 edition = "2021"
-rust-version = "1.70.0"
+rust-version = "1.77.0"
 description = "NVIDIA NVTX bindings for Rust"
 repository = "https://github.com/voltrondata/nvtx-rs"
 readme = "README.md"
@@ -25,12 +25,18 @@ publish.workspace = true
 license.workspace = true
 
 [features]
-default = ["color-name", "name-current-thread", "cuda", "cuda_runtime", "tracing"]
+default = [
+    "color-name",
+    "name-current-thread",
+    "cuda",
+    "cuda_runtime",
+    "tracing",
+]
 color-name = ["dep:color-name"]
 name-current-thread = ["dep:gettid"]
 cuda = ["nvtx-sys/cuda"]
 cuda_runtime = ["nvtx-sys/cuda_runtime"]
-tracing = ["dep:tracing-core", "dep:tracing-subscriber", "dep:color-name" ]
+tracing = ["dep:tracing-core", "dep:tracing-subscriber", "dep:color-name"]
 
 [dependencies]
 color-name = { version = "1.1.0", optional = true }
