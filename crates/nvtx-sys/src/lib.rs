@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![allow(clippy::unnecessary_operation, clippy::identity_op)]
 
 /// The unmodified FFI imported functions, types, and definitions
 pub mod ffi {
