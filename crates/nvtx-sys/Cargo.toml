@@ -11,7 +11,7 @@ publish.workspace = true
 license.workspace = true
 
 [build-dependencies]
-bindgen = "0.70.0"
+bindgen = "0.70.1"
 cc = "1.1.13"
 
 [dependencies]
