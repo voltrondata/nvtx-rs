@@ -10,7 +10,7 @@ pub struct RegisteredString<'a> {
     domain: &'a Domain,
 }
 
-impl<'a> PartialEq for RegisteredString<'a> {
+impl PartialEq for RegisteredString<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.handle == other.handle
             && self.uid == other.uid
@@ -18,7 +18,7 @@ impl<'a> PartialEq for RegisteredString<'a> {
     }
 }
 
-impl<'a> Eq for RegisteredString<'a> {}
+impl Eq for RegisteredString<'_> {}
 
 impl<'a> RegisteredString<'a> {
     pub(super) fn new(

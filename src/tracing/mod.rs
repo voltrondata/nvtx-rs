@@ -184,7 +184,7 @@ where
     }
 }
 
-impl<'a, S> Visit for NvtxVisitor<'a, S>
+impl<S> Visit for NvtxVisitor<'_, S>
 where
     S: Subscriber + for<'lookup> LookupSpan<'lookup>,
 {

@@ -17,7 +17,7 @@ impl<'a> Range<'a> {
     }
 }
 
-impl<'a> Drop for Range<'a> {
+impl Drop for Range<'_> {
     fn drop(&mut self) {
         self.domain.range_end(self.id);
     }

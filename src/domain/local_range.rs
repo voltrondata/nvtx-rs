@@ -24,7 +24,7 @@ impl<'a> LocalRange<'a> {
     }
 }
 
-impl<'a> Drop for LocalRange<'a> {
+impl Drop for LocalRange<'_> {
     fn drop(&mut self) {
         nvtx_sys::domain_range_pop(self.domain.handle);
     }

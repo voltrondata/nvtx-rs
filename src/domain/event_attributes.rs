@@ -11,7 +11,7 @@ pub struct EventAttributes<'a> {
     pub(super) message: Option<Message<'a>>,
 }
 
-impl<'a> EventAttributes<'a> {
+impl EventAttributes<'_> {
     pub(super) fn encode(&self) -> nvtx_sys::EventAttributes {
         let (color_type, color_value) = self
             .color
