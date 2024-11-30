@@ -6,7 +6,7 @@ pub struct Resource<'a> {
     pub(super) _lifetime: PhantomData<&'a ()>,
 }
 
-impl<'a> Drop for Resource<'a> {
+impl Drop for Resource<'_> {
     fn drop(&mut self) {
         nvtx_sys::domain_resource_destroy(self.handle)
     }

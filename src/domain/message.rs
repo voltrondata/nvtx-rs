@@ -24,7 +24,7 @@ impl<'a> From<RegisteredString<'a>> for Message<'a> {
     }
 }
 
-impl<'a, T: Into<Str>> From<T> for Message<'a> {
+impl<T: Into<Str>> From<T> for Message<'_> {
     fn from(value: T) -> Self {
         match value.into() {
             Str::Ascii(s) => Message::Ascii(s),
@@ -33,7 +33,7 @@ impl<'a, T: Into<Str>> From<T> for Message<'a> {
     }
 }
 
-impl<'a> TypeValueEncodable for Message<'a> {
+impl TypeValueEncodable for Message<'_> {
     type Type = nvtx_sys::MessageType;
     type Value = nvtx_sys::MessageValue;
 

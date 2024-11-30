@@ -22,7 +22,7 @@ impl<'a> UserSync<'a> {
     }
 }
 
-impl<'a> Drop for UserSync<'a> {
+impl Drop for UserSync<'_> {
     fn drop(&mut self) {
         nvtx_sys::domain_syncuser_destroy(self.handle)
     }
