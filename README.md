@@ -6,4 +6,4 @@ See the generated documentation for more details and the examples for sample usa
 
 ## Compatibility
 
-The `nvtx-rs` crate requires rustc 1.70 or greater
+The `nvtx-rs` crate requires rustc 1.77 or greater
