@@ -50,7 +50,7 @@ widestring = "1.1.0"
 tracing = { version = "0.1.41", features = ["attributes"] }
 
 [target.'cfg(unix)'.dependencies]
-libc = "0.2.170"
+libc = "0.2.171"
 
 [[example]]
 name = "domain"
