@@ -15,7 +15,7 @@ bindgen = "0.71.1"
 cc = "1.2.16"
 
 [dependencies]
-widestring = "1.1.0"
+widestring = "1.2.0"
 
 [features]
 default = []
