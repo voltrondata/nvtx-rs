@@ -38,7 +38,10 @@ env:
 jobs:
   msrv:
     name: Minimum supported Rust version
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - rootless-dind-ubuntu
+      - small
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,7 +57,10 @@ jobs:
 
   deny:
     name: Deny
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - rootless-dind-ubuntu
+      - small
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -69,7 +75,10 @@ jobs:
 
   rustfmt:
     name: Rustfmt
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - rootless-dind-ubuntu
+      - small
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -79,7 +88,10 @@ jobs:
 
   check:
     name: Check
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - rootless-dind-ubuntu
+      - small
     strategy:
       fail-fast: false
       matrix:
