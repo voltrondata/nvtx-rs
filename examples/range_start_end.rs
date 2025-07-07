@@ -15,7 +15,7 @@ fn main() {
             let mut iter = Some(nvtx::Range::new(
                 nvtx::EventAttributesBuilder::default()
                     .color(nvtx::color::cornflowerblue)
-                    .message(format!("Iteration Number {}", i))
+                    .message(format!("Iteration Number {i}"))
                     .payload(i)
                     .build(),
             ));

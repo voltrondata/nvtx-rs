@@ -10,7 +10,7 @@ fn main() {
             let _rng = nvtx::LocalRange::new(
                 nvtx::EventAttributesBuilder::default()
                     .color(nvtx::color::cornflowerblue)
-                    .message(format!("Iteration Number {}", i))
+                    .message(format!("Iteration Number {i}"))
                     .payload(i)
                     .build(),
             );
