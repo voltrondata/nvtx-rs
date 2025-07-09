@@ -16,6 +16,8 @@ pub type RangeId = ffi::nvtxRangeId_t;
 /// Struct representing all possible Event attributes.
 pub type EventAttributes = ffi::nvtxEventAttributes_t;
 
+pub const NVTX_EVENT_ATTRIBUTES_SIZE: usize = ::std::mem::size_of::<EventAttributes>();
+
 /// Struct representing all possible Resource attributes.
 pub type ResourceAttributes = ffi::nvtxResourceAttributes_t;
 

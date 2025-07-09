@@ -85,25 +85,29 @@ pub mod domain;
 /// Domain for high-level grouping within NSight profilers.
 pub type Domain = domain::Domain;
 
-/// Internal type used for efficient dispatch
-mod event_argument;
-/// Event argument for marks and ranges.
-pub use event_argument::EventArgument;
+/// Convenience wrapper for all valid argument types to ranges and marks.
+///
+/// * Any string type will be translated to [`EventArgument::Message`].
+/// * If [`EventArgument::Attributes`] is the active discriminator:
+///   - If its [`EventAttributes`] only specifies a message, then message will be used.
+///   - Otherwise, the existing [`EventAttributes`] will be used for the event.
+///
+pub type EventArgument = crate::common::GenericEventArgument<Message, EventAttributes>;
 
-/// Support for constructing detailed annotations for Ranges and Marks.
-mod event_attributes;
-/// Event attributes for marks and ranges.
-pub use event_attributes::EventAttributes;
+/// All attributes that are associated with marks and ranges.
+pub type EventAttributes = crate::common::GenericEventAttributes<Category, Message>;
 
-/// Support for thread-local ranges.
-mod local_range;
-/// Thread-local range for use within a single thread.
-pub use local_range::LocalRange;
+impl EventAttributes {
+    pub fn builder() -> crate::common::GenericEventAttributesBuilder<Category, Message> {
+        crate::common::GenericEventAttributesBuilder::default()
+    }
+}
 
-/// Support for ASCII and Unicode strings.
-mod message;
-/// Message type for use within events and ranges.
-pub use message::Message;
+/// Represents a message for use within events and ranges.
+///
+/// * [`Message::Ascii`] is the discriminator for ASCII C strings
+/// * [`Message::Unicode`] is the discriminator for Rust strings and wide C strings
+pub type Message = crate::common::GenericMessage<()>;
 
 /// Platform-native types.
 pub mod native_types;
@@ -114,9 +118,9 @@ mod payload;
 pub use payload::Payload;
 
 /// Support for process-wide ranges.
-mod range;
+mod ranges;
 /// Process-wide range for use across threads.
-pub use range::Range;
+pub use ranges::{LocalRange, Range};
 
 /// Support for transparent string types (ASCII or Unicode).
 mod str;
@@ -226,9 +230,43 @@ pub fn register_categories<const C: usize>(names: [impl Into<Str>; C]) -> [Categ
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::common::TestUtils;
+    use std::ffi::CString;
+    use widestring::WideCString;
 
     #[test]
-    fn register_category() {
+    fn test_message_ascii() {
+        let cstr = CString::new("hello").unwrap();
+        let m = Message::Ascii(cstr.clone());
+        assert!(matches!(m, Message::Ascii(s) if s == cstr));
+    }
+
+    #[test]
+    fn test_message_unicode() {
+        let s = "hello";
+        let wstr = WideCString::from_str(s).unwrap();
+        let m = Message::Unicode(wstr.clone());
+        assert!(matches!(m, Message::Unicode(s) if s == wstr));
+    }
+
+    #[test]
+    fn test_encode_ascii() {
+        let cstr = CString::new("hello").unwrap();
+        let m = Message::Ascii(cstr.clone());
+        TestUtils::assert_message_ascii_encoding(&m, "hello");
+    }
+
+    #[test]
+    fn test_encode_unicode() {
+        let s = "hello";
+        let wstr = WideCString::from_str(s).unwrap();
+        let m = Message::Unicode(wstr.clone());
+        TestUtils::assert_message_unicode_encoding(&m, "hello");
+    }
+
+    #[test]
+    fn register_category_test() {
         let cat1 = crate::register_category("category 1");
         let cat2 = crate::register_category("category 2");
         assert_ne!(cat1, cat2);
@@ -238,5 +276,51 @@ mod tests {
     fn register_categories() {
         let [cat1, cat2] = crate::register_categories(["category 1", "category 2"]);
         assert_ne!(cat1, cat2);
+    }
+    #[test]
+    fn test_builder_color() {
+        let builder = EventAttributes::builder();
+        let color = Color::new(0x11, 0x22, 0x44, 0x88);
+        let attr = builder.color(color).build();
+        assert!(matches!(attr.color, Some(c) if c == color));
+    }
+
+    #[test]
+    fn test_builder_category() {
+        let builder = EventAttributes::builder();
+        let cat = register_category("cat");
+        let attr = builder.category(cat).build();
+        assert!(matches!(attr.category, Some(c) if c == cat));
+    }
+
+    #[test]
+    fn test_builder_payload() {
+        let attr = EventAttributes::builder().payload(1_i32).build();
+        assert!(matches!(attr.payload, Some(Payload::Int32(i)) if i == 1_i32));
+        let attr = EventAttributes::builder().payload(2_u32).build();
+        assert!(matches!(attr.payload, Some(Payload::Uint32(i)) if i == 2_u32));
+        let attr = EventAttributes::builder().payload(1_i64).build();
+        assert!(matches!(attr.payload, Some(Payload::Int64(i)) if i == 1_i64));
+        let attr = EventAttributes::builder().payload(2_u64).build();
+        assert!(matches!(attr.payload, Some(Payload::Uint64(i)) if i == 2_u64));
+        let attr = EventAttributes::builder().payload(1.0_f32).build();
+        assert!(matches!(attr.payload, Some(Payload::Float(i)) if i == 1.0_f32));
+        let attr = EventAttributes::builder().payload(2.0_f64).build();
+        assert!(matches!(attr.payload, Some(Payload::Double(i)) if i == 2.0_f64));
+    }
+
+    #[test]
+    fn test_builder_message() {
+        let builder = EventAttributes::builder();
+        let string = "This is a message";
+        let attr = builder.message(string).build();
+        assert!(
+            matches!(attr.message, Some(Message::Unicode(s)) if s.to_string().unwrap() == string)
+        );
+
+        let builder = EventAttributes::builder();
+        let cstring = CString::new("This is a message").unwrap();
+        let attr = builder.message(cstring.clone()).build();
+        assert!(matches!(attr.message, Some(Message::Ascii(s)) if s == cstring));
     }
 }

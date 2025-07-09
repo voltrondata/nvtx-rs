@@ -33,11 +33,11 @@ impl<'a> RegisteredString<'a> {
         }
     }
 
-    pub(super) fn handle(&self) -> nvtx_sys::StringHandle {
+    pub(crate) fn handle(&self) -> nvtx_sys::StringHandle {
         self.handle
     }
 
-    pub(super) fn domain(&self) -> &Domain {
+    pub(crate) fn domain(&self) -> &Domain {
         self.domain
     }
 }

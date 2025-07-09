@@ -1,4 +1,4 @@
-use crate::{Str, TypeValueEncodable};
+use crate::{domain::RegisteredString, Str, TypeValueEncodable};
 use std::ffi::{CStr, CString};
 use widestring::{WideCStr, WideCString};
 
@@ -13,29 +13,21 @@ pub enum GenericMessage<T = ()> {
     Registered(T),
 }
 
-impl<T> GenericMessage<T> {
-    /// Create an ASCII message
-    pub fn ascii(s: CString) -> Self {
-        Self::Ascii(s)
-    }
-
-    /// Create a Unicode message
-    pub fn unicode(s: WideCString) -> Self {
-        Self::Unicode(s)
-    }
-
-    /// Create a registered message (domain context only)
-    pub fn registered(r: T) -> Self {
-        Self::Registered(r)
-    }
-}
-
 impl<T> From<Str> for GenericMessage<T> {
     fn from(value: Str) -> Self {
         match value {
             Str::Ascii(s) => Self::Ascii(s),
             Str::Unicode(s) => Self::Unicode(s),
         }
+    }
+}
+
+impl<'a, T> From<RegisteredString<'a>> for GenericMessage<T>
+where
+    T: From<RegisteredString<'a>>,
+{
+    fn from(v: RegisteredString<'a>) -> Self {
+        Self::Registered(v.into())
     }
 }
 
@@ -75,9 +67,30 @@ impl<T> From<&WideCStr> for GenericMessage<T> {
     }
 }
 
+trait Encodable {
+    fn encode(&self) -> (nvtx_sys::MessageType, nvtx_sys::MessageValue);
+}
+
+impl Encodable for () {
+    fn encode(&self) -> (nvtx_sys::MessageType, nvtx_sys::MessageValue) {
+        unreachable!("Registered strings are not valid in the global context")
+    }
+}
+
+impl Encodable for RegisteredString<'_> {
+    fn encode(&self) -> (nvtx_sys::MessageType, nvtx_sys::MessageValue) {
+        (
+            nvtx_sys::MessageType::NVTX_MESSAGE_TYPE_REGISTERED,
+            nvtx_sys::MessageValue {
+                registered: self.handle().into(),
+            },
+        )
+    }
+}
+
 impl<T> TypeValueEncodable for GenericMessage<T>
 where
-    T: TypeValueEncodable<Type = nvtx_sys::MessageType, Value = nvtx_sys::MessageValue>,
+    T: Encodable,
 {
     type Type = nvtx_sys::MessageType;
     type Value = nvtx_sys::MessageValue;

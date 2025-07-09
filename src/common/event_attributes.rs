@@ -1,4 +1,4 @@
-use crate::{Color, Payload, TypeValueEncodable};
+use crate::{common::GenericMessage, Color, Payload, TypeValueEncodable};
 use derive_builder::Builder;
 
 /// Generic event attributes that can be used in both global and domain contexts.
@@ -18,6 +18,20 @@ pub struct GenericEventAttributes<C, M> {
     pub payload: Option<Payload>,
 }
 
+impl<M, T: Into<GenericMessage<M>>, C> From<T> for GenericEventAttributes<C, GenericMessage<M>>
+where
+    C: CategoryEncodable,
+{
+    fn from(value: T) -> Self {
+        GenericEventAttributes {
+            category: None,
+            color: None,
+            message: Some(value.into()),
+            payload: None,
+        }
+    }
+}
+
 impl<C, M> GenericEventAttributesBuilder<C, M> {
     /// Build the event attributes, allowing all fields to be optional.
     pub fn build(self) -> GenericEventAttributes<C, M> {
@@ -30,61 +44,47 @@ impl<C, M> GenericEventAttributesBuilder<C, M> {
     }
 }
 
-/// Common encoding implementation for event attributes.
-///
-/// This function encodes the event attributes into the NVTX FFI struct.
-/// Used internally by both global and domain event attributes.
-///
-/// # Parameters
-/// - `category`: Optional category value
-/// - `color`: Optional color value
-/// - `message`: Optional message value
-/// - `payload`: Optional payload value
-pub fn encode_event_attributes<C, M>(
-    category: &Option<C>,
-    color: &Option<Color>,
-    message: &Option<M>,
-    payload: &Option<Payload>,
-) -> nvtx_sys::EventAttributes
-where
-    C: CategoryEncodable,
-    M: TypeValueEncodable<Type = nvtx_sys::MessageType, Value = nvtx_sys::MessageValue>,
-{
-    let (color_type, color_value) = color
-        .as_ref()
-        .map(Color::encode)
-        .unwrap_or_else(Color::default_encoding);
-    let (payload_type, payload_value) = payload
-        .as_ref()
-        .map(Payload::encode)
-        .unwrap_or_else(Payload::default_encoding);
-    let cat = category
-        .as_ref()
-        .map(CategoryEncodable::encode_id)
-        .unwrap_or(0);
-    let (message_type, message_value) = message
-        .as_ref()
-        .map(M::encode)
-        .unwrap_or_else(M::default_encoding);
-
-    nvtx_sys::EventAttributes {
-        version: nvtx_sys::NVTX_VERSION as u16,
-        size: 48,
-        category: cat,
-        colorType: color_type as i32,
-        color: color_value,
-        payloadType: payload_type as i32,
-        reserved0: 0,
-        payload: payload_value,
-        messageType: message_type as i32,
-        message: message_value,
-    }
-}
-
 /// Trait for encoding category IDs.
 ///
 /// Used to abstract over global and domain category types.
 pub trait CategoryEncodable {
     /// Encode the category as a u32 ID for NVTX.
     fn encode_id(&self) -> u32;
+}
+
+impl<C, M> GenericEventAttributes<C, M>
+where
+    C: CategoryEncodable,
+    M: TypeValueEncodable<Type = nvtx_sys::MessageType, Value = nvtx_sys::MessageValue>,
+{
+    pub fn encode(&self) -> nvtx_sys::EventAttributes {
+        let (color_type, color_value) = self
+            .color
+            .as_ref()
+            .map_or(Color::default_encoding(), Color::encode);
+        let (payload_type, payload_value) = self
+            .payload
+            .as_ref()
+            .map_or(Payload::default_encoding(), Payload::encode);
+        let cat = self
+            .category
+            .as_ref()
+            .map_or(0, CategoryEncodable::encode_id);
+        let (message_type, message_value) = self
+            .message
+            .as_ref()
+            .map_or(M::default_encoding(), M::encode);
+        nvtx_sys::EventAttributes {
+            version: nvtx_sys::NVTX_VERSION as u16,
+            size: nvtx_sys::NVTX_EVENT_ATTRIBUTES_SIZE as u16,
+            category: cat,
+            colorType: color_type as i32,
+            color: color_value,
+            payloadType: payload_type as i32,
+            reserved0: 0,
+            payload: payload_value,
+            messageType: message_type as i32,
+            message: message_value,
+        }
+    }
 }
