@@ -8,7 +8,7 @@ fn main() {
     for i in 1..=10 {
         {
             let _rng = nvtx::LocalRange::new(
-                nvtx::EventAttributesBuilder::default()
+                nvtx::EventAttributes::builder()
                     .color(nvtx::color::cornflowerblue)
                     .message(format!("Iteration Number {i}"))
                     .payload(i)
@@ -17,7 +17,7 @@ fn main() {
             for j in 1..=i {
                 {
                     let _r = nvtx::LocalRange::new(
-                        nvtx::EventAttributesBuilder::default()
+                        nvtx::EventAttributes::builder()
                             .color(nvtx::color::beige)
                             .payload(j)
                             .message("Inner")

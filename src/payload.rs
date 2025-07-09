@@ -103,66 +103,37 @@ impl TypeValueEncodable for Payload {
 
 #[cfg(test)]
 mod tests {
-    use crate::TypeValueEncodable;
-
     use super::Payload;
+    use crate::common::TestUtils;
 
     #[test]
-    fn test_encode_i32() {
-        let p = Payload::Int32(i32::MAX);
-        let (t, v) = p.encode();
-        assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_INT32);
-        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { iValue: v } if v == i32::MAX)) };
+    fn test_payload_int32() {
+        let payload = Payload::Int32(i32::MAX);
+        TestUtils::assert_payload_i32(&payload, i32::MAX);
     }
-
     #[test]
-    fn test_encode_u32() {
-        let p = Payload::Uint32(u32::MAX);
-        let (t, v) = p.encode();
-        assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_UNSIGNED_INT32);
-        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { uiValue: v } if v == u32::MAX)) };
+    fn test_payload_uint32() {
+        let payload = Payload::Uint32(u32::MAX);
+        TestUtils::assert_payload_u32(&payload, u32::MAX);
     }
-
     #[test]
-    fn test_encode_i64() {
-        let p = Payload::Int64(i64::MAX);
-        let (t, v) = p.encode();
-        assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_INT64);
-        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { llValue: v } if v == i64::MAX)) };
+    fn test_payload_int64() {
+        let payload = Payload::Int64(i64::MAX);
+        TestUtils::assert_payload_i64(&payload, i64::MAX);
     }
-
     #[test]
-    fn test_encode_u64() {
-        let p = Payload::Uint64(u64::MAX);
-        let (t, v) = p.encode();
-        assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_UNSIGNED_INT64);
-        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { ullValue: v } if v == u64::MAX)) };
+    fn test_payload_uint64() {
+        let payload = Payload::Uint64(u64::MAX);
+        TestUtils::assert_payload_u64(&payload, u64::MAX);
     }
-
     #[test]
-    fn test_encode_float() {
-        let p = Payload::Float(std::f32::consts::PI);
-        let (t, v) = p.encode();
-        assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_FLOAT);
-        unsafe {
-            assert!(matches!(v, nvtx_sys::PayloadValue { fValue: v } if v == std::f32::consts::PI))
-        };
+    fn test_payload_float() {
+        let payload = Payload::Float(std::f32::consts::PI);
+        TestUtils::assert_payload_f32(&payload, std::f32::consts::PI);
     }
-
     #[test]
-    fn test_encode_double() {
-        let p = Payload::Double(std::f64::consts::E);
-        let (t, v) = p.encode();
-        assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_TYPE_DOUBLE);
-        unsafe {
-            assert!(matches!(v, nvtx_sys::PayloadValue { dValue: v } if v == std::f64::consts::E))
-        };
-    }
-
-    #[test]
-    fn test_encode_defaults() {
-        let (t, v) = Payload::default_encoding();
-        assert_eq!(t, nvtx_sys::PayloadType::NVTX_PAYLOAD_UNKNOWN);
-        unsafe { assert!(matches!(v, nvtx_sys::PayloadValue { ullValue: v } if v == 0)) };
+    fn test_payload_double() {
+        let payload = Payload::Double(std::f64::consts::E);
+        TestUtils::assert_payload_f64(&payload, std::f64::consts::E);
     }
 }
