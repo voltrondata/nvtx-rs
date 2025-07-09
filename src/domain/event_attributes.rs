@@ -1,55 +1,23 @@
 use super::{Category, Message};
-use crate::{Color, Domain, Payload, Str, TypeValueEncodable};
+use crate::{
+    common::event_attributes::{
+        encode_event_attributes, GenericEventAttributes, GenericEventAttributesBuilder,
+    },
+    Color, Domain, Payload, Str,
+};
 
 /// All attributes that are associated with marks and ranges.
-#[derive(Debug, Clone)]
-pub struct EventAttributes<'a> {
-    pub(super) domain: Option<&'a Domain>,
-    pub(super) category: Option<Category<'a>>,
-    pub(super) color: Option<Color>,
-    pub(super) payload: Option<Payload>,
-    pub(super) message: Option<Message<'a>>,
-}
+pub type EventAttributes<'a> = GenericEventAttributes<Category<'a>, Message<'a>>;
 
 impl EventAttributes<'_> {
     pub(super) fn encode(&self) -> nvtx_sys::EventAttributes {
-        let (color_type, color_value) = self
-            .color
-            .as_ref()
-            .map(Color::encode)
-            .unwrap_or_else(Color::default_encoding);
-        let (payload_type, payload_value) = self
-            .payload
-            .as_ref()
-            .map(Payload::encode)
-            .unwrap_or_else(Payload::default_encoding);
-        let cat = self.category.as_ref().map(Category::id).unwrap_or(0);
-        let emit = |(t, v)| nvtx_sys::EventAttributes {
-            version: nvtx_sys::NVTX_VERSION as u16,
-            size: 48,
-            category: cat,
-            colorType: color_type as i32,
-            color: color_value,
-            payloadType: payload_type as i32,
-            reserved0: 0,
-            payload: payload_value,
-            messageType: t as i32,
-            message: v,
-        };
-        // this is separated as a callable since we need encode() to outlive the call to emit
-        emit(
-            self.message
-                .as_ref()
-                .map(Message::encode)
-                .unwrap_or_else(Message::default_encoding),
-        )
+        encode_event_attributes(&self.category, &self.color, &self.message, &self.payload)
     }
 }
 
 impl<'a, T: Into<Message<'a>>> From<T> for EventAttributes<'a> {
     fn from(value: T) -> Self {
         EventAttributes {
-            domain: None,
             category: None,
             color: None,
             message: Some(value.into()),
@@ -61,22 +29,20 @@ impl<'a, T: Into<Message<'a>>> From<T> for EventAttributes<'a> {
 /// Builder to facilitate easier construction of [`EventAttributes`].
 ///
 /// ```
-/// let cat = nvtx::Category::new("Category1");
+/// let domain = nvtx::Domain::new("Domain");
+/// let cat = domain.register_category("Category1");
 ///
-/// let attr = nvtx::EventAttributesBuilder::default()
+/// let attr = domain.event_attributes_builder()
 ///                .category(cat)
 ///                .color([20, 192, 240])
 ///                .payload(3.141592)
 ///                .message("Hello")
 ///                .build();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct EventAttributesBuilder<'a> {
     pub(super) domain: &'a Domain,
-    pub(super) category: Option<Category<'a>>,
-    pub(super) color: Option<Color>,
-    pub(super) payload: Option<Payload>,
-    pub(super) message: Option<Message<'a>>,
+    pub(super) inner: GenericEventAttributesBuilder<Category<'a>, Message<'a>>,
 }
 
 impl<'a> EventAttributesBuilder<'a> {
@@ -96,9 +62,10 @@ impl<'a> EventAttributesBuilder<'a> {
             std::ptr::eq(category.domain(), self.domain),
             "EventAttributesBuilder's Domain differs from Category's Domain"
         );
-        self.category = Some(category);
+        self.inner = self.inner.category(category);
         self
     }
+
     /// Update the attribute's category. An assertion will be thrown if a Category is
     /// passed in whose domain is not the same as this builder.
     ///
@@ -110,7 +77,8 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let builder = builder.category_name("Category2");
     /// ```
     pub fn category_name(mut self, name: impl Into<Str>) -> EventAttributesBuilder<'a> {
-        self.category = Some(self.domain.register_category(name));
+        let category = self.domain.register_category(name);
+        self.inner = self.inner.category(category);
         self
     }
 
@@ -123,7 +91,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let builder = builder.color([255, 255, 255]);
     /// ```
     pub fn color(mut self, color: impl Into<Color>) -> EventAttributesBuilder<'a> {
-        self.color = Some(color.into());
+        self.inner = self.inner.color(color);
         self
     }
 
@@ -136,7 +104,7 @@ impl<'a> EventAttributesBuilder<'a> {
     /// let builder = builder.payload(3.1415926535);
     /// ```
     pub fn payload(mut self, payload: impl Into<Payload>) -> EventAttributesBuilder<'a> {
-        self.payload = Some(payload.into());
+        self.inner = self.inner.payload(payload);
         self
     }
 
@@ -161,7 +129,7 @@ impl<'a> EventAttributesBuilder<'a> {
             std::ptr::eq(msg.domain(), self.domain),
             "EventAttributesBuilder's Domain differs from RegisteredString's Domain"
         );
-        self.message = Some(Message::Registered(msg));
+        self.inner = self.inner.message(Message::Registered(msg));
         self
     }
 
@@ -178,13 +146,7 @@ impl<'a> EventAttributesBuilder<'a> {
     ///                 .build();
     /// ```
     pub fn build(self) -> EventAttributes<'a> {
-        EventAttributes {
-            domain: Some(self.domain),
-            category: self.category,
-            color: self.color,
-            payload: self.payload,
-            message: self.message,
-        }
+        self.inner.build()
     }
 }
 
@@ -323,5 +285,16 @@ mod tests {
         let s1 = d1.register_string("test string");
         let d2 = Domain::new("Domain2");
         d2.range(d2.event_attributes_builder().message(s1).build());
+    }
+
+    #[test]
+    #[should_panic(expected = "EventAttributes' Domain does not match current Domain")]
+    fn test_simple_domain_validation() {
+        let d1 = Domain::new("Domain1");
+        let s1 = d1.register_string("test string");
+        let d2 = Domain::new("Domain2");
+        // Create attributes with a string from d1, then use them with d2
+        let attr = d1.event_attributes_builder().message(s1).build();
+        d2.mark(attr);
     }
 }

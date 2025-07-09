@@ -1,4 +1,4 @@
-use crate::{EventArgument, Message};
+use crate::{common::LocalRangeLike, EventArgument, Message};
 use std::marker::PhantomData;
 
 /// A RAII-like object for modeling callstack (thread-local) Ranges.
@@ -20,7 +20,7 @@ impl LocalRange {
     /// let range = nvtx::LocalRange::new(c"simple name");
     ///
     /// // creation from EventAttributes
-    /// let attr = nvtx::EventAttributesBuilder::default()
+    /// let attr = nvtx::EventAttributes::builder()
     ///     .payload(1)
     ///     .message("complex range")
     ///     .build();
@@ -30,9 +30,18 @@ impl LocalRange {
     /// drop(range)
     /// ```
     pub fn new(arg: impl Into<EventArgument>) -> LocalRange {
+        LocalRange::new_from_arg(arg)
+    }
+}
+
+impl LocalRangeLike for LocalRange {
+    fn new_from_arg(arg: impl Into<EventArgument>) -> Self {
         match arg.into() {
             EventArgument::Message(Message::Ascii(s)) => nvtx_sys::range_push_ascii(&s),
             EventArgument::Message(Message::Unicode(s)) => nvtx_sys::range_push_unicode(&s),
+            EventArgument::Message(Message::Registered(_)) => {
+                unreachable!("Registered strings are not valid in the global context")
+            }
             EventArgument::Attributes(a) => nvtx_sys::range_push_ex(&a.encode()),
         };
         LocalRange {

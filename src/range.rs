@@ -1,4 +1,4 @@
-use crate::{EventArgument, Message};
+use crate::{common::RangeLike, EventArgument, Message};
 
 /// A RAII-like object for modeling process-wide Ranges.
 #[derive(Debug)]
@@ -18,7 +18,7 @@ impl Range {
     /// let range = nvtx::Range::new(c"simple name");
     ///
     /// // creation from EventAttributes
-    /// let attr = nvtx::EventAttributesBuilder::default()
+    /// let attr = nvtx::EventAttributes::builder()
     ///     .payload(1)
     ///     .message("complex range")
     ///     .build();
@@ -28,13 +28,23 @@ impl Range {
     /// drop(range)
     /// ```
     pub fn new(arg: impl Into<EventArgument>) -> Range {
-        Range {
-            id: match arg.into() {
-                EventArgument::Message(Message::Ascii(s)) => nvtx_sys::range_start_ascii(&s),
-                EventArgument::Message(Message::Unicode(s)) => nvtx_sys::range_start_unicode(&s),
-                EventArgument::Attributes(a) => nvtx_sys::range_start_ex(&a.encode()),
-            },
-        }
+        Range::new_from_arg(arg)
+    }
+}
+
+impl RangeLike for Range {
+    type Id = nvtx_sys::RangeId;
+
+    fn new_from_arg(arg: impl Into<EventArgument>) -> Self {
+        let id = match arg.into() {
+            EventArgument::Message(Message::Ascii(s)) => nvtx_sys::range_start_ascii(&s),
+            EventArgument::Message(Message::Unicode(s)) => nvtx_sys::range_start_unicode(&s),
+            EventArgument::Message(Message::Registered(_)) => {
+                unreachable!("Registered strings are not valid in the global context")
+            }
+            EventArgument::Attributes(a) => nvtx_sys::range_start_ex(&a.encode()),
+        };
+        Range { id }
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{EventAttributes, Message};
+use crate::{common::GenericEventArgument, EventAttributes, Message};
 
 /// Convenience wrapper for all valid argument types to ranges and marks.
 ///
@@ -6,13 +6,7 @@ use crate::{EventAttributes, Message};
 /// * If [`EventArgument::Attributes`] is the active discriminator:
 ///   - If its [`EventAttributes`] only specifies a message, then message will be used.
 ///   - Otherwise, the existing [`EventAttributes`] will be used for the event.
-#[derive(Debug, Clone)]
-pub enum EventArgument {
-    /// Holds a Message.
-    Message(Message),
-    /// Holds an EventAttributes.
-    Attributes(EventAttributes),
-}
+pub type EventArgument = GenericEventArgument<Message, EventAttributes>;
 
 impl<T: Into<EventAttributes>> From<T> for EventArgument {
     fn from(value: T) -> Self {

@@ -55,11 +55,17 @@
 //!   condition variables, and read-write-locks.
 
 mod category;
+/// Category for use with marks and ranges.
 pub use category::Category;
+
+/// Common utilities and types shared between global and domain contexts
+mod common;
+#[cfg(test)]
+pub use common::test_utils;
 
 /// Support for colors.
 pub mod color;
-/// Represents a color in use for controlling appearance within NSight profilers.
+/// Color type for controlling appearance within NSight profilers.
 pub type Color = color::Color;
 
 #[cfg(feature = "cuda")]
@@ -76,23 +82,27 @@ pub use cuda_runtime::*;
 
 /// Specialized types for use within a domain context.
 pub mod domain;
-/// Represents a domain for high-level grouping within NSight profilers.
+/// Domain for high-level grouping within NSight profilers.
 pub type Domain = domain::Domain;
 
 /// Internal type used for efficient dispatch
 mod event_argument;
+/// Event argument for marks and ranges.
 pub use event_argument::EventArgument;
 
 /// Support for constructing detailed annotations for Ranges and Marks.
 mod event_attributes;
-pub use event_attributes::{EventAttributes, EventAttributesBuilder};
+/// Event attributes for marks and ranges.
+pub use event_attributes::EventAttributes;
 
 /// Support for thread-local ranges.
 mod local_range;
+/// Thread-local range for use within a single thread.
 pub use local_range::LocalRange;
 
 /// Support for ASCII and Unicode strings.
 mod message;
+/// Message type for use within events and ranges.
 pub use message::Message;
 
 /// Platform-native types.
@@ -100,14 +110,17 @@ pub mod native_types;
 
 /// Support for payload information for Ranges and Marks.
 mod payload;
+/// Payload type for use with event attributes.
 pub use payload::Payload;
 
 /// Support for process-wide ranges.
 mod range;
+/// Process-wide range for use across threads.
 pub use range::Range;
 
 /// Support for transparent string types (ASCII or Unicode).
 mod str;
+/// Transparent string type (ASCII or Unicode).
 pub use crate::str::Str;
 
 #[cfg(feature = "tracing")]
@@ -115,8 +128,10 @@ pub use crate::str::Str;
 pub mod tracing;
 
 /// Trait used to encode a type to a struct type and value.
-trait TypeValueEncodable {
+pub trait TypeValueEncodable {
+    /// The type identifier for the encoded value.
     type Type;
+    /// The value to be encoded.
     type Value;
 
     /// Analyze the current state and yield a type-value tuple.
@@ -128,6 +143,8 @@ trait TypeValueEncodable {
 
 /// Marks an instantaneous event in the application.
 ///
+/// See [`EventArgument`] and [`EventAttributesBuilder`] for usage.
+///
 /// A marker can contain a text message or specify additional information using the event
 /// attributes structure. These attributes include a text message, color, category, and a
 /// payload. Each of the attributes is optional.
@@ -138,7 +155,7 @@ trait TypeValueEncodable {
 /// nvtx::mark(c"Another example");
 ///
 /// nvtx::mark(
-///   nvtx::EventAttributesBuilder::default()
+///   nvtx::EventAttributes::builder()
 ///     .message("Interesting example")
 ///     .color([255, 0, 0])
 ///     .build());
@@ -147,17 +164,20 @@ pub fn mark(argument: impl Into<EventArgument>) {
     match argument.into() {
         EventArgument::Message(Message::Ascii(s)) => nvtx_sys::mark_ascii(&s),
         EventArgument::Message(Message::Unicode(s)) => nvtx_sys::mark_unicode(&s),
+        EventArgument::Message(Message::Registered(_)) => {
+            unreachable!("Registered strings are not valid in the global context")
+        }
         EventArgument::Attributes(a) => nvtx_sys::mark_ex(&a.encode()),
     }
 }
 
 /// Name an active thread of the current process.
 ///
+/// See [`Str`] for valid conversions.
+///
 /// If an invalid thread ID is provided or a thread ID from a different process is used
 /// the behavior of the tool is implementation dependent. This requires the OS-specific
 /// thread id to be passed in.
-///
-/// See [`Str`] for valid conversions.
 ///
 /// Note: getting the native TID is not necessarily easy. Prefer [`name_current_thread`]
 /// if you are trying to name the current thread.

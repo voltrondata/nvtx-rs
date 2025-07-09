@@ -12,6 +12,10 @@ pub struct LocalRange<'a> {
 
 impl<'a> LocalRange<'a> {
     pub(super) fn new(arg: impl Into<EventArgument<'a>>, domain: &'a Domain) -> LocalRange<'a> {
+        LocalRange::new_from_arg_with_domain(arg, domain)
+    }
+
+    fn new_from_arg_with_domain(arg: impl Into<EventArgument<'a>>, domain: &'a Domain) -> Self {
         let arg = match arg.into() {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => domain.event_attributes_builder().message(m).build(),

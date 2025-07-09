@@ -129,7 +129,7 @@ impl TypeValueEncodable for Color {
 
 #[cfg(test)]
 mod tests {
-    use crate::TypeValueEncodable;
+    use crate::{common::TestUtils, TypeValueEncodable};
 
     use super::Color;
 
@@ -196,9 +196,7 @@ mod tests {
     fn encode() {
         let (r, g, b, a) = (0x12, 0x34, 0x56, 0x78);
         let color = Color::new(r, g, b, a);
-        let (t, v) = color.encode();
-        assert_eq!(t, nvtx_sys::ColorType::NVTX_COLOR_ARGB);
-        assert_eq!(v, u32::from_be_bytes([a, r, g, b]));
+        TestUtils::assert_color_encoding(&color, r, g, b, a);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use crate::Domain;
+use crate::{common::CategoryEncodable, Domain};
 
 /// Represents a domain-owned category for use with mark and range grouping.
 ///
@@ -22,11 +22,13 @@ impl<'a> Category<'a> {
         Category { id, domain }
     }
 
-    pub(super) fn id(&self) -> u32 {
-        self.id
-    }
-
     pub(super) fn domain(&self) -> &Domain {
         self.domain
+    }
+}
+
+impl CategoryEncodable for Category<'_> {
+    fn encode_id(&self) -> u32 {
+        self.id
     }
 }

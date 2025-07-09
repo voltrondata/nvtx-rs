@@ -10,6 +10,10 @@ pub struct Range<'a> {
 
 impl<'a> Range<'a> {
     pub(super) fn new(arg: impl Into<EventArgument<'a>>, domain: &'a Domain) -> Range<'a> {
+        Range::new_from_arg_with_domain(arg, domain)
+    }
+
+    fn new_from_arg_with_domain(arg: impl Into<EventArgument<'a>>, domain: &'a Domain) -> Self {
         Range {
             id: domain.range_start(arg),
             domain,

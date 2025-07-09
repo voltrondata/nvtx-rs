@@ -4,7 +4,7 @@ fn main() {
     // we must hold ranges with a proper name
     // _ will not work since drop() is called immediately
     let mut app = Some(nvtx::Range::new(
-        nvtx::EventAttributesBuilder::default()
+        nvtx::EventAttributes::builder()
             .color(nvtx::color::salmon)
             .message("Start 🦀")
             .build(),
@@ -13,7 +13,7 @@ fn main() {
     for i in 10..=20 {
         {
             let mut iter = Some(nvtx::Range::new(
-                nvtx::EventAttributesBuilder::default()
+                nvtx::EventAttributes::builder()
                     .color(nvtx::color::cornflowerblue)
                     .message(format!("Iteration Number {i}"))
                     .payload(i)
@@ -22,7 +22,7 @@ fn main() {
             for j in 1..=i {
                 {
                     let inner = nvtx::Range::new(
-                        nvtx::EventAttributesBuilder::default()
+                        nvtx::EventAttributes::builder()
                             .color(nvtx::color::beige)
                             .payload(j)
                             .message("Inner")

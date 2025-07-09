@@ -1,4 +1,4 @@
-use crate::{Str, TypeValueEncodable};
+use crate::{common::event_attributes::GenericEventAttributesBuilder, Str, TypeValueEncodable};
 use std::{
     collections::HashMap,
     marker::PhantomData,
@@ -85,10 +85,7 @@ impl Domain {
     pub fn event_attributes_builder(&self) -> EventAttributesBuilder<'_> {
         EventAttributesBuilder {
             domain: self,
-            category: None,
-            color: None,
-            message: None,
-            payload: None,
+            inner: GenericEventAttributesBuilder::default(),
         }
     }
 
@@ -218,18 +215,35 @@ impl Domain {
     /// domain.mark(reg_str);
     /// ```
     pub fn mark<'a>(&'a self, arg: impl Into<EventArgument<'a>>) {
-        let attribute: EventAttributes<'a> = match arg.into() {
-            EventArgument::Attributes(attr) => attr,
-            EventArgument::Message(m) => m.into(),
-        };
-        if let Some(domain) = attribute.domain {
-            assert!(
-                std::ptr::eq(domain, self),
-                "EventAttributes' Domain does not match current Domain"
-            );
+        match arg.into() {
+            EventArgument::Attributes(attr) => {
+                if let Some(category) = &attr.category {
+                    assert!(
+                        std::ptr::eq(category.domain(), self),
+                        "EventAttributes' Domain does not match current Domain"
+                    );
+                }
+                if let Some(Message::Registered(reg_str)) = &attr.message {
+                    assert!(
+                        std::ptr::eq(reg_str.domain(), self),
+                        "EventAttributes' Domain does not match current Domain"
+                    );
+                }
+                let encoded = attr.encode();
+                nvtx_sys::domain_mark_ex(self.handle, &encoded)
+            }
+            EventArgument::Message(m) => {
+                if let Message::Registered(reg_str) = m {
+                    assert!(
+                        std::ptr::eq(reg_str.domain(), self),
+                        "EventAttributes' Domain does not match current Domain"
+                    );
+                }
+                let attr: EventAttributes = m.into();
+                let encoded = attr.encode();
+                nvtx_sys::domain_mark_ex(self.handle, &encoded)
+            }
         }
-        let encoded = attribute.encode();
-        nvtx_sys::domain_mark_ex(self.handle, &encoded)
     }
 
     /// Create an RAII-friendly, domain-owned range type which (1) cannot be moved across
@@ -283,7 +297,34 @@ impl Domain {
     /// drop(range)
     /// ```
     pub fn range<'a>(&'a self, arg: impl Into<EventArgument<'a>>) -> Range<'a> {
-        Range::new(arg, self)
+        let event_arg = arg.into();
+        match &event_arg {
+            EventArgument::Attributes(attr) => {
+                // Validate that all categories and messages belong to this domain
+                if let Some(category) = &attr.category {
+                    assert!(
+                        std::ptr::eq(category.domain(), self),
+                        "EventAttributes' Domain does not match current Domain"
+                    );
+                }
+                if let Some(Message::Registered(reg_str)) = &attr.message {
+                    assert!(
+                        std::ptr::eq(reg_str.domain(), self),
+                        "EventAttributes' Domain does not match current Domain"
+                    );
+                }
+            }
+            EventArgument::Message(m) => {
+                // NEW: Add validation here
+                if let Message::Registered(reg_str) = m {
+                    assert!(
+                        std::ptr::eq(reg_str.domain(), self),
+                        "EventAttributes' Domain does not match current Domain"
+                    );
+                }
+            }
+        }
+        Range::new(event_arg, self)
     }
 
     /// Internal function for starting a range and returning a raw Range Id
@@ -292,12 +333,6 @@ impl Domain {
             EventArgument::Attributes(attr) => attr,
             EventArgument::Message(m) => m.into(),
         };
-        if let Some(domain) = arg.domain {
-            assert!(
-                std::ptr::eq(domain, self),
-                "EventAttributes' Domain does not match current Domain"
-            );
-        }
         nvtx_sys::domain_range_start_ex(self.handle, &arg.encode())
     }
 
@@ -371,14 +406,16 @@ impl Drop for Domain {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::TestUtils;
 
     #[test]
     fn test_register_string() {
         let d = Domain::new("d");
+        TestUtils::assert_domain_string_registration(&d, "hello");
+
+        // Test different strings are different
         let s1 = d.register_string("hello");
         let s2 = d.register_string("hello2");
-        let s3 = d.register_string("hello");
-        assert_eq!(s1, s3);
         assert_ne!(s1, s2);
     }
 
@@ -393,10 +430,11 @@ mod tests {
     #[test]
     fn test_register_category() {
         let d = Domain::new("d");
+        TestUtils::assert_domain_category_registration(&d, "hello");
+
+        // Test different categories are different
         let c1 = d.register_category("hello");
         let c2 = d.register_category("hello2");
-        let c3 = d.register_category("hello");
-        assert_eq!(c1, c3);
         assert_ne!(c1, c2);
     }
 
