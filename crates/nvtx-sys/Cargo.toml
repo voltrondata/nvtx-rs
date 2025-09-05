@@ -12,7 +12,7 @@ license.workspace = true
 
 [build-dependencies]
 bindgen = "0.72.1"
-cc = "1.2.35"
+cc = "1.2.36"
 
 [dependencies]
 widestring = "1.2.0"
