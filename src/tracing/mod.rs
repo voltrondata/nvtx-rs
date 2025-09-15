@@ -224,7 +224,7 @@ where
         let owned = value.to_string();
         match field.name() {
             "color" => {
-                if let Ok([r, g, b]) = color_name::Color::val().by_string(owned) {
+                if let Ok([r, g, b]) = color_name::css::Color::val().by_string(owned) {
                     self.data.color = Some(Color::new(r, g, b, 255));
                 }
             }
